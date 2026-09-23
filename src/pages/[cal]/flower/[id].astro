@@ -1,8 +1,8 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Row from '../../../components/Row.astro';
-import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has } from '../../../lib.mjs';
-import { MONTHS } from '../../../config.mjs';
+import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf } from '../../../lib.mjs';
+import { MONTHS, AUTHOR } from '../../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.flatMap((c) =>
     speciesOf(c.slug).map((s) => ({ params: { cal: c.slug, id: s.id }, props: { cal: c, s } }))
@@ -10,6 +10,7 @@ export function getStaticPaths() {
 }
 const { cal, s } = Astro.props;
 const ms = monthsOf(s), ys = yearsOf(s);
+const pics = photosOf(cal.slug, s);
 const sheets = [...new Set(s.no.map((n) => n.split('-')[0]))];
 const nearby = liveOf(cal.slug).filter((x) => x.z && x.z === s.z && x.id !== s.id && ms.some((m) => has(x, m))).slice(0, 8);
 const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''}拍到開花${s.z ? '，位於' + s.z : ''}。`;
@@ -23,7 +24,22 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
         ? `近年未見：最後一次拍到是 ${s.last.slice(0, 7).replace('-', ' 年 ')} 月，地圖上沒有標。`
         : '這一株已經不在園區了，記錄保留供參考。'}</p>
     )}
-    <div class="photo"><span>照片準備中</span></div>
+    {pics ? (
+      <figure class="gal" data-n={pics.ph.length}>
+        {pics.ph.map((p, k) => (
+          <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${p.i}.jpg`} target="_blank" rel="noopener">
+            <img src={`/p/${pics.s}/${p.i}${k === 0 ? '' : 't'}.jpg`} alt={`${s.n}　${p.d}`}
+                 loading={k === 0 ? 'eager' : 'lazy'} decoding="async" />
+            {p.d && <span class="cap">{k === 0
+              ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日'
+              : p.d.slice(0, 7).replace('-', '.')}</span>}
+          </a>
+        ))}
+        <figcaption>照片：{AUTHOR}　點照片看大圖</figcaption>
+      </figure>
+    ) : (
+      <div class="photo"><span>照片準備中</span></div>
+    )}
     <h2>開花月份</h2>
     <div class="big">
       {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -59,6 +75,20 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .crumb{font-size:14px;color:var(--leaf);margin:24px 0 4px}
 .crumb a{color:var(--leaf)}
 .warn{color:var(--bloom);font-size:15px;margin:0 0 8px}
+.gal{margin:14px 0 30px;display:grid;gap:8px;max-width:760px;
+  grid-template-columns:repeat(3,1fr)}
+.gal .big{grid-column:1/-1}
+.gal[data-n="1"]{grid-template-columns:1fr}
+.gal a{position:relative;display:block;border-radius:12px;overflow:hidden;background:var(--mist);line-height:0}
+.gal a img{width:100%;height:100%;object-fit:cover;display:block}
+.gal .big img{aspect-ratio:4/3}
+.gal a:not(.big) img{aspect-ratio:1}
+.gal .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 6px;font-size:12px;line-height:1.4;
+  color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.55));opacity:0;transition:opacity .15s}
+.gal .big .cap{font-size:13px;opacity:1}
+.gal a:hover .cap,.gal a:focus-visible .cap{opacity:1}
+.gal figcaption{grid-column:1/-1;font-size:13px;color:var(--leaf);margin-top:2px}
+@media (max-width:560px){.gal{gap:6px}.gal .cap{opacity:1}}
 .photo{aspect-ratio:3/2;max-width:640px;background:var(--mist);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--leaf);margin:12px 0 28px}
 .big{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:560px;margin:6px 0 20px}
 .big a{text-align:center;font-size:12px;color:var(--leaf);text-decoration:none}

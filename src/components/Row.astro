@@ -1,11 +1,23 @@
 ---
 import Ribbon from './Ribbon.astro';
-import { url } from '../lib.mjs';
+import { url, coverOf } from '../lib.mjs';
 const { s, slug, cur = 0 } = Astro.props;
+const cover = coverOf(slug, s);
 ---
 <a class="row" href={url(slug, s)} data-z={s.z}>
   <span class={'code' + (s.no.length ? '' : ' none')}>{s.no[0] || '—'}</span>
+  <span class="thumb">
+    {cover
+      ? <img src={cover} alt="" width="48" height="48" loading="lazy" decoding="async" />
+      : <i aria-hidden="true"></i>}
+  </span>
   <span class="nm">{s.n}{s.i && <span class="tag">{s.i}內</span>}{s.st !== '現存' && <span class="tag">{s.st}</span>}</span>
   <span class="zn">{s.z}</span>
   <Ribbon s={s} cur={cur} />
 </a>
+<style>
+.thumb{width:48px;height:48px;flex:none}
+.thumb img{width:48px;height:48px;object-fit:cover;border-radius:8px;display:block;background:var(--mist)}
+.thumb i{display:block;width:48px;height:48px;border-radius:8px;background:var(--mist)}
+@media (max-width:560px){.thumb,.thumb img,.thumb i{width:40px;height:40px}}
+</style>

@@ -4,6 +4,16 @@ const files = import.meta.glob('./data/*.json', { eager: true });
 const DATA = {};
 for (const p in files) DATA[p.split('/').pop().replace('.json', '')] = files[p].default;
 
+const pfiles = import.meta.glob('./photos/*.json', { eager: true });
+const PHOTOS = {};
+for (const p in pfiles) PHOTOS[p.split('/').pop().replace('.json', '')] = pfiles[p].default;
+
+export const photosOf = (slug, s) => (PHOTOS[slug] || {})[s.n] || null;
+export const coverOf = (slug, s) => {
+  const p = photosOf(slug, s);
+  return p && p.ph.length ? `/p/${p.s}/${p.ph[0].i}t.jpg` : null;
+};
+
 export const calFor = (slug) => CALENDARS.find((c) => c.slug === slug);
 export const LIVE_CALENDARS = CALENDARS.filter((c) => (DATA[c.slug] || []).length > 0);
 export const speciesOf = (slug) => DATA[slug] || [];
