@@ -1,0 +1,9 @@
+---
+import { has, monthsOf } from '../lib.mjs';
+const { s, cur = 0 } = Astro.props;
+---
+<span class="rib" aria-label={`開花月份：${monthsOf(s).join('、')} 月`}>
+  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+    <i class={(has(s, m) ? 'b' : '') + (m === cur && has(s, m) ? ' cur' : '')}></i>
+  ))}
+</span>

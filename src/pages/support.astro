@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import { SPONSOR_500_URL, SPONSOR_1000_URL } from '../config.mjs';
+const tiers = [
+  { amt: 500, text: '你的名字會列在網站的感謝花友名單。', href: SPONSOR_500_URL },
+  { amt: 1000, text: '名字列在網站，也印在口袋地圖的致謝欄；地圖出版後寄一份給你。', href: SPONSOR_1000_URL, main: true },
+];
+---
+<Base title="支持這份花曆" current="support" description="贊助小花老師的花曆，支持這份記錄繼續下去。">
+  <section>
+    <h1>支持這份花曆</h1>
+    <p class="sub">花曆的資料全部來自小花老師每週實地拍攝的記錄，網站免費使用。如果它幫你找到了想拍的花，歡迎贊助。</p>
+    <div class="tiers">
+      {tiers.map((t) => (
+        <div class={'tier' + (t.main ? ' main' : '')}>
+          <div class="amt">{t.amt}<small>元</small></div>
+          <p>{t.text}</p>
+          {t.href
+            ? <a class="btn solid" href={t.href} rel="noopener">前往贊助</a>
+            : <span class="btn" aria-disabled="true">贊助連結準備中</span>}
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>
+<style>
+.tiers{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px}
+@media (max-width:640px){.tiers{grid-template-columns:1fr}}
+.tier{border:1px solid var(--mist);border-radius:16px;padding:22px;background:var(--panel)}
+.tier.main{border-color:var(--bloom)}
+.amt{font-family:var(--serif);font-weight:900;font-size:36px;line-height:1}
+.amt small{font-size:16px;font-weight:500;margin-left:4px}
+.tier p{margin:12px 0 18px;font-size:15px}
+.tier .btn{display:block;text-align:center}
+</style>

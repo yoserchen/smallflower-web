@@ -1,0 +1,62 @@
+---
+import Base from '../../layouts/Base.astro';
+import { LIVE_CALENDARS, speciesOf } from '../../lib.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.filter((c) => c.hasMap).map((c) => ({ params: { cal: c.slug }, props: { cal: c } }));
+}
+const { cal } = Astro.props;
+const idx = {};
+speciesOf(cal.slug).forEach((s) => s.no.forEach((n) => { idx[n] = [s.id, s.n]; }));
+const cnt = {};
+Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] || 0) + 1; });
+---
+<Base title="用地圖編號查花" cal={cal} current="map" description={`輸入${cal.place}口袋地圖上的編號，查看那一株是什麼花。`}>
+  <section>
+    <h1>用地圖編號查花</h1>
+    <p class="sub">輸入口袋地圖上的編號，例如 4-157，就會跳到那種花。前面的數字是第幾張，後面是號碼。目前對應{cal.mapEdition}。</p>
+    <form id="f" class="search" onsubmit="return false">
+      <input id="n" inputmode="numeric" placeholder="例如 4-157" aria-label="地圖編號" autocomplete="off" />
+    </form>
+    <p id="r" class="hint" aria-live="polite"></p>
+    <div class="sheets">
+      {Object.entries(cal.sheets || {}).map(([k, v]) => (
+        <div class="sh"><b>第 {k} 張</b><span>{v}</span><small>{cnt[k] || 0} 株</small></div>
+      ))}
+    </div>
+  </section>
+  <script type="application/json" id="idx" set:html={JSON.stringify(idx)}></script>
+  <script type="application/json" id="cfg" set:html={JSON.stringify({ slug: cal.slug })}></script>
+  <script is:inline>
+  (function () {
+    var I = JSON.parse(document.getElementById('idx').textContent);
+    var SLUG = JSON.parse(document.getElementById('cfg').textContent).slug;
+    var n = document.getElementById('n'), r = document.getElementById('r');
+    function norm(v) {
+      v = v.replace(/[－—–\s]/g, '-').replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); });
+      var m = v.match(/^(\d)\D*(\d{1,3})$/);
+      return m ? m[1] + '-' + Number(m[2]) : v;
+    }
+    function go() {
+      var k = norm(n.value.trim());
+      if (!k) { r.textContent = ''; return; }
+      var h = I[k];
+      if (h) r.innerHTML = '<a href="/' + SLUG + '/flower/' + encodeURIComponent(h[0]) + '/">' + k + '　' + h[1] + '</a>';
+      else r.textContent = '找不到 ' + k + '，請確認張號和號碼。';
+    }
+    n.addEventListener('input', go);
+    document.getElementById('f').addEventListener('submit', function () {
+      var h = I[norm(n.value.trim())];
+      if (h) location.href = '/' + SLUG + '/flower/' + encodeURIComponent(h[0]) + '/';
+    });
+    var p = new URLSearchParams(location.search).get('n');
+    if (p) { n.value = p; go(); }
+  })();
+  </script>
+</Base>
+<style>
+.sheets{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:28px}
+.sh{padding:16px;border:1px solid var(--mist);border-radius:14px;background:var(--panel);display:grid}
+.sh b{font-family:var(--serif);font-size:20px}
+.sh small{color:var(--leaf)}
+#r a{font-size:18px;font-weight:700}
+</style>

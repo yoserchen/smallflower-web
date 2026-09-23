@@ -1,0 +1,31 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Clock from '../../../components/Clock.astro';
+import { LIVE_CALENDARS, liveOf, monthCountOf } from '../../../lib.mjs';
+import { MONTHS } from '../../../config.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.map((c) => ({ params: { cal: c.slug }, props: { cal: c } }));
+}
+const { cal } = Astro.props;
+const counts = monthCountOf(cal.slug);
+const live = liveOf(cal.slug);
+---
+<Base title="各月開花" cal={cal} current="month" description={`${cal.place}一到十二月各開哪些花。`}>
+  <section>
+    <h1>各月開花</h1>
+    <p class="sub">點一個月份，看那個月在{cal.place}拍到開花的全部種類。</p>
+    <div class="grid">
+      {MONTHS.map((n, i) => (
+        <a class="mcard" href={`/${cal.slug}/month/${i + 1}/`}><b>{n}</b><span>{counts[i]} 種</span></a>
+      ))}
+    </div>
+    <div style="margin-top:32px"><Clock counts={counts} slug={cal.slug} active={0} total={live.length} /></div>
+  </section>
+</Base>
+<style>
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mcard{display:flex;justify-content:space-between;align-items:baseline;padding:16px;border:1px solid var(--mist);border-radius:14px;background:var(--panel);color:var(--ink);text-decoration:none}
+.mcard b{font-family:var(--serif);font-size:22px}
+.mcard span{color:var(--leaf);font-size:14px}
+.mcard:hover{border-color:var(--bloom)}
+</style>

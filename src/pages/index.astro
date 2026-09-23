@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
+import { BRAND, AUTHOR } from '../config.mjs';
+const cards = LIVE_CALENDARS.map((c) => ({ ...c, n: liveOf(c.slug).length }));
+const total = cards.reduce((a, c) => a + c.n, 0);
+---
+<Base description={`${AUTHOR}實地記錄的花曆，每一種花什麼時候開、開在哪裡。目前收錄 ${total.toLocaleString()} 種。`}>
+  <section class="top">
+    <h1>{BRAND}</h1>
+    <p class="lead">每一種花什麼時候開、開在哪裡，都是實地一株一株拍下來記的。目前收錄 {total.toLocaleString()} 種。</p>
+  </section>
+  <section>
+    <div class="cards">
+      {cards.map((c) => (
+        <a class="card" href={`/${c.slug}/`}>
+          <b>{c.name}</b>
+          <p>{c.blurb}</p>
+          <span>{c.n.toLocaleString()} 種{c.hasMap && '　附口袋地圖'}</span>
+        </a>
+      ))}
+      <div class="card soon">
+        <b>還有更多</b>
+        <p>合歡山、陽明山、梅峰的記錄正在整理，會陸續加進來。</p>
+      </div>
+    </div>
+  </section>
+</Base>
+<style>
+.top{padding:56px 0 8px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{display:block;padding:24px;border:1px solid var(--mist);border-radius:18px;background:var(--panel);color:var(--ink);text-decoration:none}
+.card b{font-family:var(--serif);font-size:24px;display:block}
+.card p{margin:8px 0 14px;font-size:15px}
+.card span{font-size:14px;color:var(--bloom);font-weight:700}
+.card:hover{border-color:var(--bloom)}
+.card.soon{background:transparent;border-style:dashed}
+.card.soon b,.card.soon p{color:var(--leaf)}
+</style>

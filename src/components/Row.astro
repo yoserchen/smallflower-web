@@ -1,0 +1,11 @@
+---
+import Ribbon from './Ribbon.astro';
+import { url } from '../lib.mjs';
+const { s, slug, cur = 0 } = Astro.props;
+---
+<a class="row" href={url(slug, s)} data-z={s.z}>
+  <span class={'code' + (s.no.length ? '' : ' none')}>{s.no[0] || '—'}</span>
+  <span class="nm">{s.n}{s.i && <span class="tag">{s.i}內</span>}{s.st !== '現存' && <span class="tag">{s.st}</span>}</span>
+  <span class="zn">{s.z}</span>
+  <Ribbon s={s} cur={cur} />
+</a>

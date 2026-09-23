@@ -1,0 +1,37 @@
+---
+import { MONTHS } from '../config.mjs';
+const { counts, slug, active = 0, total = 0 } = Astro.props;
+const cx = 210, cy = 210, r0 = 48, L = 128, max = Math.max(...counts);
+const petals = counts.map((c, i) => {
+  const m = i + 1, len = 34 + L * (c / max), w = 17 + 10 * (c / max), ang = (m % 12) * 30;
+  const a = (ang - 90) * Math.PI / 180;
+  return { m, c, ang,
+    d: `M0,${-r0} C${w},${-r0 - len * .3} ${w * .7},${-r0 - len * .92} 0,${-r0 - len} C${-w * .7},${-r0 - len * .92} ${-w},${-r0 - len * .3} 0,${-r0} Z`,
+    lx: cx + Math.cos(a) * 196, ly: cy + Math.sin(a) * 196 };
+});
+---
+<svg class="clock" viewBox="0 0 420 420" role="group" aria-label="花鐘：點花瓣看各月份開的花">
+  {petals.map((p) => (
+    <a href={`/${slug}/month/${p.m}/`} class={'petal' + (p.m === active ? ' on' : '')} data-m={p.m}
+       aria-label={`${MONTHS[p.m - 1]}，${p.c} 種`}>
+      <path transform={`translate(${cx},${cy}) rotate(${p.ang})`} d={p.d} />
+    </a>
+  ))}
+  {petals.map((p) => <text class={'mlab' + (p.m === active ? ' on' : '')} data-m={p.m} x={p.lx} y={p.ly}>{p.m}</text>)}
+  <a href={`/${slug}/month/`} class="center" aria-label="看全部月份">
+    <circle cx={cx} cy={cy} r={r0 - 4} />
+    <text class="cm" x={cx} y={cy + 4} id="clockMonth">{active ? MONTHS[active - 1] : '全年'}</text>
+    <text class="cn" x={cx} y={cy + 24} id="clockCount">{active ? `${counts[active - 1]} 種` : `${total} 種`}</text>
+  </a>
+</svg>
+<style>
+.clock{width:100%;max-width:460px;margin:0 auto;display:block}
+.clock .petal path{fill:var(--mist);stroke:var(--paper);stroke-width:2;transition:fill .2s}
+.clock .petal:hover path{fill:var(--leaf)}
+.clock .petal.on path{fill:var(--bloom)}
+.clock .mlab{font-family:var(--serif);font-size:15px;fill:var(--leaf);text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.clock .mlab.on{fill:var(--bloom);font-weight:700}
+.clock .center circle{fill:var(--paper);stroke:var(--mist)}
+.clock .cm{font-family:var(--serif);font-weight:900;font-size:30px;fill:var(--ink);text-anchor:middle}
+.clock .cn{font-size:13px;fill:var(--leaf);text-anchor:middle}
+</style>

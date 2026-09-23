@@ -1,0 +1,76 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Row from '../../../components/Row.astro';
+import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has } from '../../../lib.mjs';
+import { MONTHS } from '../../../config.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.flatMap((c) =>
+    speciesOf(c.slug).map((s) => ({ params: { cal: c.slug, id: s.id }, props: { cal: c, s } }))
+  );
+}
+const { cal, s } = Astro.props;
+const ms = monthsOf(s), ys = yearsOf(s);
+const sheets = [...new Set(s.no.map((n) => n.split('-')[0]))];
+const nearby = liveOf(cal.slug).filter((x) => x.z && x.z === s.z && x.id !== s.id && ms.some((m) => has(x, m))).slice(0, 8);
+const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''}拍到開花${s.z ? '，位於' + s.z : ''}。`;
+---
+<Base title={s.n} cal={cal} description={desc}>
+  <section>
+    <p class="crumb"><a href={`/${cal.slug}/`}>{cal.name}</a>{s.z && <span> ／ {s.z}</span>}</p>
+    <h1>{s.n}</h1>
+    {s.st !== '現存' && (
+      <p class="warn">{s.st === '近年未見'
+        ? `近年未見：最後一次拍到是 ${s.last.slice(0, 7).replace('-', ' 年 ')} 月，地圖上沒有標。`
+        : '這一株已經不在園區了，記錄保留供參考。'}</p>
+    )}
+    <div class="photo"><span>照片準備中</span></div>
+    <h2>開花月份</h2>
+    <div class="big">
+      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+        <a href={`/${cal.slug}/month/${m}/`} class={has(s, m) ? 'b' : ''} aria-label={`${MONTHS[m - 1]}開的花`}><i></i>{m}月</a>
+      ))}
+    </div>
+    <dl class="facts">
+      {s.no.length > 0 && (
+        <>
+          <dt>地圖編號</dt>
+          <dd>
+            {s.no.map((n) => <span class="no">{n}</span>)}
+            <small>（第 {sheets.map((k) => `${k} 張${cal.sheets?.[k] || ''}`).join('、')}）</small>
+          </dd>
+        </>
+      )}
+      {s.z && <><dt>區域</dt><dd>{s.z}{s.i && `，${s.i}內`}</dd></>}
+      <dt>拍到的年份</dt>
+      <dd class="yrs">{[2023, 2024, 2025, 2026].map((y) => <span class={ys.includes(y) ? 'y' : ''}>{y}</span>)}</dd>
+      <dt>記錄數</dt><dd>{s.c} 筆</dd>
+      {s.p && <><dt>記錄部位</dt><dd>{s.p}</dd></>}
+    </dl>
+    {cal.hasMap && <p class="note">網站上的位置只標到區域。每一株的精確位置印在口袋地圖上。</p>}
+  </section>
+  {nearby.length > 0 && (
+    <section>
+      <h2>同一區、同時期開的花</h2>
+      <div class="list">{nearby.map((x) => <Row s={x} slug={cal.slug} />)}</div>
+    </section>
+  )}
+</Base>
+<style>
+.crumb{font-size:14px;color:var(--leaf);margin:24px 0 4px}
+.crumb a{color:var(--leaf)}
+.warn{color:var(--bloom);font-size:15px;margin:0 0 8px}
+.photo{aspect-ratio:3/2;max-width:640px;background:var(--mist);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--leaf);margin:12px 0 28px}
+.big{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:560px;margin:6px 0 20px}
+.big a{text-align:center;font-size:12px;color:var(--leaf);text-decoration:none}
+.big a i{display:block;height:26px;border-radius:4px;background:var(--mist);margin-bottom:3px}
+.big a.b i{background:var(--leaf)}
+.big a:hover i{outline:2px solid var(--bloom)}
+.facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:16px;margin:0}
+.facts dt{color:var(--leaf)}
+.facts dd{margin:0}
+.facts .no{display:inline-block;font-weight:700;color:var(--bloom);margin-right:10px;font-variant-numeric:tabular-nums}
+.facts small{color:var(--leaf)}
+.yrs span{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;font-size:13px;background:var(--mist);color:var(--leaf)}
+.yrs span.y{background:var(--ink);color:var(--paper)}
+.note{font-size:14px;color:var(--leaf);margin-top:14px}
+</style>

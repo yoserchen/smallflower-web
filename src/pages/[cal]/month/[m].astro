@@ -1,0 +1,43 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Row from '../../../components/Row.astro';
+import { LIVE_CALENDARS, liveOf, has, byNo } from '../../../lib.mjs';
+import { MONTHS } from '../../../config.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.flatMap((c) =>
+    Array.from({ length: 12 }, (_, i) => ({ params: { cal: c.slug, m: String(i + 1) }, props: { cal: c } }))
+  );
+}
+const { cal } = Astro.props;
+const m = Number(Astro.params.m);
+const list = liveOf(cal.slug).filter((s) => has(s, m)).sort(byNo);
+const zones = [...new Set(list.map((s) => s.z).filter(Boolean))];
+---
+<Base title={`${MONTHS[m - 1]}開的花`} cal={cal} current="month"
+      description={`${cal.place}${MONTHS[m - 1]}開的 ${list.length} 種花。`}>
+  <section>
+    <p class="chips" aria-label="選擇月份">
+      {MONTHS.map((n, i) => (
+        <a class="chip" href={`/${cal.slug}/month/${i + 1}/`} aria-current={i + 1 === m ? 'page' : undefined}>{n}</a>
+      ))}
+    </p>
+    <h1>{MONTHS[m - 1]}開的花</h1>
+    <p class="sub">{list.length} 種。{cal.note}</p>
+    {zones.length > 1 && (
+      <div class="chips" id="zf" role="group" aria-label="篩選區域">
+        <button class="chip" aria-pressed="true" data-z="">全部</button>
+        {zones.map((z) => <button class="chip" aria-pressed="false" data-z={z}>{z}</button>)}
+      </div>
+    )}
+    <div class="list">{list.map((s) => <Row s={s} slug={cal.slug} cur={m} />)}</div>
+  </section>
+  <script is:inline>
+  document.querySelectorAll('#zf .chip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#zf .chip').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      var z = b.dataset.z;
+      document.querySelectorAll('.list .row').forEach(function (r) { r.style.display = (!z || r.dataset.z === z) ? '' : 'none'; });
+    });
+  });
+  </script>
+</Base>

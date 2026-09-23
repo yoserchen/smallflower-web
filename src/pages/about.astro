@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import { FB_URL, YOUTUBE_URL, BRAND } from '../config.mjs';
+import { LIVE_CALENDARS, speciesOf } from '../lib.mjs';
+const total = LIVE_CALENDARS.reduce((a, c) => a + speciesOf(c.slug).length, 0);
+---
+<Base title="關於" current="about">
+  <section style="max-width:40em">
+    <h1>關於</h1>
+    <p>小花老師長期在台北植物園記錄開花，每週在 <a href={FB_URL} rel="noopener">FB 粉絲專頁</a>分享，
+      {YOUTUBE_URL ? <>也在 YouTube <a href={YOUTUBE_URL} rel="noopener">小花視界</a>介紹拍到的花，</> : '也在 YouTube「小花視界」介紹拍到的花，'}
+      著有《花精靈》。</p>
+    <p>{BRAND}整理自 2023 年以來的實地拍攝記錄，目前收錄 {total.toLocaleString()} 種。月份代表曾在這個月拍到開花，每年實際的花期會前後移動。</p>
+    <p>網站上的位置只標到區域。每一株的精確位置印在口袋地圖上，這樣也順便保護稀有植物，不會被照著座標一窩蜂去踩。</p>
+    <p>合歡山、陽明山、梅峰農場的記錄正在整理，之後會陸續加進來。</p>
+  </section>
+</Base>
