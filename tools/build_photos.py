@@ -196,9 +196,11 @@ t0 = time.time()
 for nm, photos in sorted(idx.items()):
     sg = slugify(nm)
     td = os.path.join(THUMBS, sg)
+    shutil.rmtree(td, ignore_errors=True)
     os.makedirs(td, exist_ok=True)
     rows = []
-    for k, (path, meta) in enumerate(sorted(photos.items(), key=lambda x: -x[1]['ts'])):
+    for path, meta in sorted(photos.items(), key=lambda x: -x[1]['ts']):
+        k = hashlib.md5(path.encode('utf-8')).hexdigest()[:8]
         try:
             im = Image.open(path)
             im.draft('RGB', (640, 640))          # JPEG 快速降尺寸解碼
@@ -233,6 +235,28 @@ print(f'評分完成，{done} 張，{time.time()-t0:.0f} 秒')
 # ---------- 3. 決定每種用哪 4 張 ----------
 picks_file = os.path.join(ROOT, 'tools/photo_picks.json')
 manual = json.load(open(picks_file, encoding='utf-8')) if os.path.exists(picks_file) else {}
+
+# 舊版的手動指定是「第幾張」，照片一增減就會對到別張。這裡換算成固定編號，只做一次。
+if any(isinstance(v, list) and v and isinstance(v[0], int) for v in manual.values()):
+    conv, drop = {}, []
+    for nm, want in manual.items():
+        rows = scored.get(nm, {}).get('all', [])
+        if not rows:
+            continue
+        if not (want and isinstance(want[0], int)):
+            conv[nm] = want; continue
+        if any(r.get('own') for r in rows):
+            drop.append(nm); continue          # 有自己補的照片，順序已變，交給自動挑選
+        got = [rows[i]['k'] for i in want if 0 <= i < len(rows)]
+        if got:
+            conv[nm] = got
+    shutil.copy2(picks_file, picks_file + '.bak')
+    json.dump(conv, open(picks_file, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    manual = conv
+    print(f'手動指定已換成固定編號（舊檔備份為 photo_picks.json.bak）')
+    if drop:
+        print(f'  這幾種有自己補的照片，順序變了，改用自動挑選，請重新挑一次：{"、".join(drop)}')
+
 print(f'手動指定 {len(manual)} 種')
 
 

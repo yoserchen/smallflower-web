@@ -92,9 +92,14 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
 <script>
 const DATA = __DATA__;
 const AUTO = DATA.current, SP = DATA.species;
-const KEY = 'huali-picks-v1';
+const KEY = 'huali-picks-v2';
 let picks = {};
 try { picks = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { picks = {}; }
+// 舊版存的是「第幾張」，跟現在的固定編號不相容，一律丟掉
+for (var _n in picks) {
+  if (!Array.isArray(picks[_n]) || picks[_n].some(function (x) { return typeof x !== 'string'; })) delete picks[_n];
+}
+try { localStorage.removeItem('huali-picks-v1'); } catch (e) {}
 const names = Object.keys(SP).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
 let cur = names[0], mode = 'all', q = '';
 
