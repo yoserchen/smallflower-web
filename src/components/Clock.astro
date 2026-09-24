@@ -27,8 +27,9 @@ const petals = counts.map((c, i) => {
 <style>
 .clock{width:100%;max-width:460px;margin:0 auto;display:block}
 .clock .petal path{fill:var(--mist);stroke:var(--paper);stroke-width:2;transition:fill .2s}
-.clock .petal:hover path{fill:var(--leaf)}
-.clock .petal.on path{fill:var(--bloom)}
+.clock .petal:hover path{fill:var(--bloom);opacity:.5}
+.clock .petal.on path{fill:var(--bloom);opacity:1}
+.clock .petal.on:hover path{opacity:1}
 .clock .mlab{font-family:var(--serif);font-size:15px;fill:var(--leaf);text-anchor:middle;dominant-baseline:middle;pointer-events:none}
 .clock .mlab.on{fill:var(--bloom);font-weight:700}
 .clock .center circle{fill:var(--paper);stroke:var(--mist)}

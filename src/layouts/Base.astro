@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { BRAND, AUTHOR, FB_URL } from '../config.mjs';
+import { BRAND, AUTHOR, FB_URL, YOUTUBE_URL } from '../config.mjs';
 const { title, description = `${AUTHOR}的花曆：什麼時候開、開在哪裡。`, cal = null, current = '' } = Astro.props;
 const suffix = cal ? cal.name : BRAND;
 const full = title ? `${title}｜${suffix}` : suffix;
@@ -36,7 +36,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <main class="wrap"><slot /></main>
   <footer><div class="wrap">
     {cal && <><a href="/">← 看其他花曆</a><br /></>}
-    {BRAND}　資料與照片版權屬{AUTHOR}所有　<a href={FB_URL} rel="noopener">FB 粉絲專頁</a><br />
+    {BRAND}　資料與照片版權屬{AUTHOR}所有　<a href={FB_URL} rel="noopener">FB 粉絲專頁</a>{YOUTUBE_URL && <> ・ <a href={YOUTUBE_URL} rel="noopener">YouTube 小花視界</a></>}<br />
     花期是實地拍到開花的月份，每年會前後移動。
   </div></footer>
   <button id="totop" type="button" aria-label="回到最上面" hidden>

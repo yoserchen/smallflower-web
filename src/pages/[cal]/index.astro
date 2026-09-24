@@ -1,14 +1,17 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Clock from '../../components/Clock.astro';
-import { LIVE_CALENDARS, liveOf, monthCountOf, byNo } from '../../lib.mjs';
+import { LIVE_CALENDARS, liveOf, monthCountOf, byNo, photosOf } from '../../lib.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.map((c) => ({ params: { cal: c.slug }, props: { cal: c } }));
 }
 const { cal } = Astro.props;
 const live = liveOf(cal.slug);
 const counts = monthCountOf(cal.slug);
-const mini = live.slice().sort(byNo).map((s) => [s.id, s.n, s.m, s.no[0] || '', s.z, s.i]);
+const mini = live.slice().sort(byNo).map((s) => {
+  const p = photosOf(cal.slug, s);
+  return [s.id, s.n, s.m, s.no[0] || '', s.z, s.i, p && p.ph.length ? p.s : ''];
+});
 ---
 <Base cal={cal} description={`${cal.intro}共 ${live.length.toLocaleString()} 種。`}>
   <div class="hero">
@@ -69,6 +72,9 @@ const mini = live.slice().sort(byNo).map((s) => [s.id, s.n, s.m, s.no[0] || '', 
         ? out.map(function (x) {
             return '<a class="row" href="/' + SLUG + '/flower/' + encodeURIComponent(x[0]) + '/">'
               + '<span class="code' + (x[3] ? '' : ' none') + '">' + (x[3] || '—') + '</span>'
+              + '<span class="thumb">' + (x[6]
+                  ? '<img loading="lazy" decoding="async" width="48" height="48" alt="" src="/p/' + x[6] + '/1t.jpg" />'
+                  : '<i></i>') + '</span>'
               + '<span class="nm">' + esc(x[1]) + (x[5] ? '<span class="tag">' + esc(x[5]) + '內</span>' : '') + '</span>'
               + '<span class="zn">' + esc(x[4]) + '</span>' + rib(x) + '</a>';
           }).join('')

@@ -18,6 +18,11 @@ import os, sys, json, glob, hashlib, datetime, shutil, re, time
 
 try:
     from PIL import Image, ImageOps, ImageFilter, ImageStat
+    try:
+        import pillow_heif                      # 選用：讓 iPhone 的 .HEIC 也能讀
+        pillow_heif.register_heif_opener()
+    except ImportError:
+        pass
 except ImportError:
     print("""
 少了 Pillow 這個套件。請先執行下面這行安裝，再重跑一次：
@@ -34,12 +39,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SLUG = 'tpbg'
 N_PICK = 4
 PICKER = os.path.expanduser('~/Documents/花曆挑片')
+EXTRA = os.path.expanduser('~/Documents/花曆更新/照片')
+EXTS = ('.jpg', '.jpeg', '.png', '.heic', '.heif', '.tif', '.tiff', '.webp')
 
-if len(sys.argv) < 2:
-    print('用法：python3 tools/build_photos.py "<FB 匯出資料夾>"'); sys.exit(1)
-FB = sys.argv[1].rstrip('/')
-if not os.path.isdir(os.path.join(FB, 'posts', 'album')):
-    print('找不到 posts/album，請確認路徑是解壓後那個 this_profile.. 資料夾'); sys.exit(1)
+FB = sys.argv[1].rstrip('/') if len(sys.argv) > 1 else ''
+if len(sys.argv) > 2 and sys.argv[2]:
+    EXTRA = sys.argv[2].rstrip('/')
+if FB and not os.path.isdir(os.path.join(FB, 'posts', 'album')):
+    print(f'找不到 {FB}/posts/album，當作沒有 FB 匯出繼續。')
+    FB = ''
+if not FB and not os.path.isdir(EXTRA):
+    print('既沒有 FB 匯出也沒有補充照片，沒事可做。'); sys.exit(0)
 
 
 def fix(s):
@@ -71,7 +81,7 @@ names = {s['n'] for s in species}
 alias = json.load(open(os.path.join(ROOT, 'tools/aliases.json'), encoding='utf-8'))
 
 idx = {}
-for f in sorted(glob.glob(os.path.join(FB, 'posts/album/*.json'))):
+for f in (sorted(glob.glob(os.path.join(FB, 'posts/album/*.json'))) if FB else []):
     try:
         d = json.load(open(f, encoding='utf-8'))
     except Exception:
@@ -94,8 +104,86 @@ for f in sorted(glob.glob(os.path.join(FB, 'posts/album/*.json'))):
         ts = ex.get('taken_timestamp') or p.get('creation_timestamp') or 0
         idx.setdefault(nm, {})[path] = {'ts': ts, 'album': album}
 
+
+# 圖說是一整句話時的補救：句首就是花名才算
+long_names = sorted((n for n in names if len(n) >= 3), key=len, reverse=True)
+for f in (sorted(glob.glob(os.path.join(FB, 'posts/album/*.json'))) if FB else []):
+    try:
+        d = json.load(open(f, encoding='utf-8'))
+    except Exception:
+        continue
+    if not (isinstance(d, dict) and 'photos' in d):
+        continue
+    album = fix(d.get('name', ''))
+    for p in d['photos']:
+        de = fix(p.get('description', '') or '').strip()
+        if not de:
+            continue
+        h = head_name(de)
+        if h and alias.get(h, h) in names:
+            continue
+        hit = next((n for n in long_names if de.startswith(n)), None)
+        if not hit:
+            continue
+        rel = p['uri'].split("this_profile's_activity_across_facebook/", 1)[-1]
+        path = os.path.join(FB, rel)
+        if not os.path.exists(path) or path in idx.get(hit, {}):
+            continue
+        ex = (p.get('media_metadata', {}).get('photo_metadata', {}).get('exif_data') or [{}])[0]
+        ts = ex.get('taken_timestamp') or p.get('creation_timestamp') or 0
+        idx.setdefault(hit, {})[path] = {'ts': ts, 'album': album}
+
+# ---------- 1b. 自己補的照片 ----------
+n_extra = 0
+if os.path.isdir(EXTRA):
+    def shot_time(path):
+        """優先用 EXIF 的拍攝時間，沒有才用檔案時間。"""
+        try:
+            ex = Image.open(path).getexif()
+            for tag in (36867, 36868, 306):      # DateTimeOriginal / Digitized / DateTime
+                v = ex.get(tag)
+                if v:
+                    return int(datetime.datetime.strptime(str(v)[:19],
+                               '%Y:%m:%d %H:%M:%S').timestamp())
+        except Exception:
+            pass
+        return int(os.path.getmtime(path))
+
+    def add_extra(nm, path):
+        global n_extra
+        nm = alias.get(nm, nm)
+        if nm not in names:
+            print(f'  ! 補充照片的花名對不到主檔，略過：{nm}')
+            return
+        idx.setdefault(nm, {})[path] = {'ts': shot_time(path),
+                                        'album': '自己補的', 'own': True}
+        n_extra += 1
+    for e in sorted(os.listdir(EXTRA)):
+        p = os.path.join(EXTRA, e)
+        if os.path.isdir(p):
+            for f2 in sorted(os.listdir(p)):
+                if f2.lower().endswith(EXTS):
+                    add_extra(e.strip(), os.path.join(p, f2))
+        elif e.lower().endswith(EXTS):
+            add_extra(re.split(r'[-_ ]\d*$|\d+$', os.path.splitext(e)[0])[0].strip(), p)
+    print(f'自己補的照片 {n_extra} 張')
+else:
+    os.makedirs(EXTRA, exist_ok=True)
+    print(f'（可以把自己的照片放到 {EXTRA}）')
+
 total = sum(len(v) for v in idx.values())
 print(f'對到 {len(idx)} 種花、{total} 張照片')
+
+# --- 保險：不要在找不到來源時把已經做好的照片刪掉 ---
+META = os.path.join(ROOT, 'src/photos', SLUG + '.json')
+had = len(json.load(open(META, encoding='utf-8'))) if os.path.exists(META) else 0
+if total == 0:
+    print('找不到任何照片來源，維持原樣不動。')
+    sys.exit(0)
+if had and len(idx) < had * 0.7 and '--force' not in sys.argv:
+    print(f'這次只對到 {len(idx)} 種，原本有 {had} 種，差太多，怕是來源資料夾沒掛好。')
+    print('已經停下來，照片維持原樣。確定要覆蓋的話在指令後面加 --force。')
+    sys.exit(2)
 
 # ---------- 2. 評分 + 做挑片縮圖 ----------
 os.makedirs(PICKER, exist_ok=True)
@@ -128,10 +216,12 @@ for nm, photos in sorted(idx.items()):
         center = ImageStat.Stat(c).stddev[0]
         yr = datetime.date.fromtimestamp(meta['ts']).year if meta['ts'] else 2023
         score = sharp * 1.0 + center * 0.6 + max(0, yr - 2023) * 3.0
+        if meta.get('own'):
+            score += 10000          # 自己補的照片一律優先
         tn = ImageOps.fit(im, (220, 220), Image.LANCZOS, centering=(.5, .45))
         tn.save(os.path.join(td, f'{k}.jpg'), 'JPEG', quality=58, optimize=True)
         rows.append({'k': k, 'p': path, 'ts': meta['ts'], 'a': meta['album'],
-                     'sc': round(score, 1),
+                     'sc': round(score, 1), 'own': bool(meta.get('own')),
                      'd': datetime.date.fromtimestamp(meta['ts']).isoformat() if meta['ts'] else ''})
         done += 1
         if done % 500 == 0:
@@ -147,9 +237,10 @@ print(f'手動指定 {len(manual)} 種')
 
 
 def auto_pick(rows):
-    """分數排序，但同一天最多取一張，湊不滿再放寬。"""
-    out, seen = [], set()
-    for r in sorted(rows, key=lambda r: -r['sc']):
+    """自己補的照片一律優先；其餘按分數，同一天最多取一張，湊不滿再放寬。"""
+    out = [r for r in rows if r.get('own')][:N_PICK]
+    seen = set()
+    for r in sorted((r for r in rows if not r.get('own')), key=lambda r: -r['sc']):
         if len(out) >= N_PICK:
             break
         if r['d'] and r['d'] in seen:
@@ -230,5 +321,6 @@ with open(os.path.join(PICKER, '挑片.html'), 'w', encoding='utf-8') as fh:
     fh.write(html)
 
 print(f'挑片工具寫到 {PICKER}/挑片.html（{len(pick_idx)} 種）')
-print('\n完成。接著執行：')
-print('  npm run build && git add -A && git commit -m "加上照片" && git push')
+if len(sys.argv) <= 2:
+    print('\n完成。接著執行：')
+    print('  npm run build && git add -A && git commit -m "加上照片" && git push')
