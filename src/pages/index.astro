@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
-import { BRAND, AUTHOR } from '../config.mjs';
+import { BRAND, AUTHOR, GOATCOUNTER } from '../config.mjs';
 const cards = LIVE_CALENDARS.map((c) => ({ ...c, n: liveOf(c.slug).length }));
 const total = cards.reduce((a, c) => a + c.n, 0);
 ---
@@ -21,13 +21,30 @@ const total = cards.reduce((a, c) => a + c.n, 0);
       ))}
       <div class="card soon">
         <b>還有更多</b>
-        <p>合歡山、陽明山、梅峰的記錄正在整理，會陸續加進來。</p>
+        <p>更多地點的花曆記錄正在整理，之後會陸續加進來。</p>
       </div>
     </div>
   </section>
+  {GOATCOUNTER && (
+    <>
+      <p class="views" id="views" hidden>網站累計瀏覽 <b id="vn">—</b> 次</p>
+      <script is:inline set:html={`
+      (function(){
+        fetch('https://${GOATCOUNTER}.goatcounter.com/counter/TOTAL.json')
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d){
+            if (!d || !d.count) return;
+            document.getElementById('vn').textContent = d.count;
+            document.getElementById('views').hidden = false;
+          }).catch(function(){});
+      })();`} />
+    </>
+  )}
 </Base>
 <style>
 .top{padding:56px 0 8px}
+.views{text-align:center;color:var(--leaf);font-size:14px;margin:8px 0 40px}
+.views b{color:var(--ink);font-variant-numeric:tabular-nums}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .card{display:block;padding:24px;border:1px solid var(--mist);border-radius:18px;background:var(--panel);color:var(--ink);text-decoration:none}
 .card b{font-family:var(--serif);font-size:24px;display:block}

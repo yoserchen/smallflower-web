@@ -8,6 +8,16 @@ const pfiles = import.meta.glob('./photos/*.json', { eager: true });
 const PHOTOS = {};
 for (const p in pfiles) PHOTOS[p.split('/').pop().replace('.json', '')] = pfiles[p].default;
 
+const zfiles = import.meta.glob('./zones/*.json', { eager: true });
+const ZONES = {};
+for (const p in zfiles) ZONES[p.split('/').pop().replace('.json', '')] = zfiles[p].default;
+
+export const zoneLL = (slug, z) => (ZONES[slug] || {})[z] || null;
+export const zoneMapUrl = (slug, z) => {
+  const ll = zoneLL(slug, z);
+  return ll ? `https://www.google.com/maps/search/?api=1&query=${ll[0]},${ll[1]}` : null;
+};
+
 export const photosOf = (slug, s) => (PHOTOS[slug] || {})[s.n] || null;
 export const coverOf = (slug, s) => {
   const p = photosOf(slug, s);

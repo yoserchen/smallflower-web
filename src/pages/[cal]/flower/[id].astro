@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Row from '../../../components/Row.astro';
-import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf } from '../../../lib.mjs';
+import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf, zoneMapUrl } from '../../../lib.mjs';
 import { MONTHS, AUTHOR } from '../../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.flatMap((c) =>
@@ -11,6 +11,7 @@ export function getStaticPaths() {
 const { cal, s } = Astro.props;
 const ms = monthsOf(s), ys = yearsOf(s);
 const pics = photosOf(cal.slug, s);
+const zoneUrl = zoneMapUrl(cal.slug, s.z);
 const sheets = [...new Set(s.no.map((n) => n.split('-')[0]))];
 const nearby = liveOf(cal.slug).filter((x) => x.z && x.z === s.z && x.id !== s.id && ms.some((m) => has(x, m))).slice(0, 8);
 const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''}拍到開花${s.z ? '，位於' + s.z : ''}。`;
@@ -57,7 +58,15 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
           </dd>
         </>
       )}
-      {s.z && <><dt>區域</dt><dd>{s.z}{s.i && `，${s.i}內`}</dd></>}
+      {s.z && (
+        <>
+          <dt>區域</dt>
+          <dd>
+            {s.z}{s.i && `，${s.i}內`}
+            {zoneUrl && <a class="gmap" href={zoneUrl} target="_blank" rel="noopener">在 Google 地圖看這一區 ↗</a>}
+          </dd>
+        </>
+      )}
       <dt>拍到的年份</dt>
       <dd class="yrs">{[2023, 2024, 2025, 2026].map((y) => <span class={ys.includes(y) ? 'y' : ''}>{y}</span>)}</dd>
       <dt>記錄數</dt><dd>{s.c} 筆</dd>
@@ -108,4 +117,5 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .yrs span{display:inline-block;margin-right:6px;padding:0 6px;border-radius:4px;font-size:13px;background:var(--mist);color:var(--leaf)}
 .yrs span.y{background:var(--ink);color:var(--paper)}
 .note{font-size:14px;color:var(--leaf);margin-top:14px}
+.gmap{display:inline-block;margin-left:10px;font-size:13.5px;white-space:nowrap}
 </style>

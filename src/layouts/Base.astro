@@ -1,10 +1,13 @@
 ---
 import '../styles/global.css';
-import { BRAND, AUTHOR, FB_URL, YOUTUBE_URL } from '../config.mjs';
+import { BRAND, AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
+import { LIVE_CALENDARS } from '../lib.mjs';
 const { title, description = `${AUTHOR}的花曆：什麼時候開、開在哪裡。`, cal = null, current = '' } = Astro.props;
 const suffix = cal ? cal.name : BRAND;
 const full = title ? `${title}｜${suffix}` : suffix;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// 站內頁（贊助、關於）在只有一本花曆時，選單也帶出那本的月份與地圖
+const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
 ---
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
@@ -22,13 +25,17 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+  {GOATCOUNTER && (
+    <script is:inline defer data-goatcounter={`https://${GOATCOUNTER}.goatcounter.com/count`}
+            src="//gc.zgo.at/count.js"></script>
+  )}
 </head>
 <body>
   <header class="top"><div class="wrap">
     <a class="brand" href={cal ? `/${cal.slug}/` : '/'}>{cal ? cal.name : BRAND}</a>
     <nav aria-label="主選單">
-      {cal && <a href={`/${cal.slug}/month/`} aria-current={current === 'month' ? 'page' : undefined}>月份</a>}
-      {cal && cal.hasMap && <a href={`/${cal.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>地圖編號</a>}
+      {nc && <a href={`/${nc.slug}/month/`} aria-current={current === 'month' ? 'page' : undefined}>月份</a>}
+      {nc && nc.hasMap && <a href={`/${nc.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>地圖編號</a>}
       <a href="/support/" aria-current={current === 'support' ? 'page' : undefined}>贊助</a>
       <a href="/about/" aria-current={current === 'about' ? 'page' : undefined}>關於</a>
     </nav>
