@@ -36,12 +36,17 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
               : p.d.slice(0, 7).replace('-', '.')}</span>}
           </a>
         ))}
-        <figcaption>照片：{AUTHOR}　點照片看大圖</figcaption>
+        <figcaption>點照片看大圖</figcaption>
       </figure>
     ) : (
       <div class="photo"><span>照片準備中</span></div>
     )}
-    {s.t && <div class="note-box">{s.t.split(/\n+/).map((para) => <p>{para}</p>)}</div>}
+    {s.t && (
+      <div class="note-box">
+        <h2>{AUTHOR}對這朵花的印象</h2>
+        {s.t.split(/\n+/).map((para) => <p>{para}</p>)}
+      </div>
+    )}
     <h2>開花月份</h2>
     <div class="big">
       {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -100,8 +105,10 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .gal figcaption{grid-column:1/-1;font-size:13px;color:var(--leaf);margin-top:2px}
 @media (max-width:560px){.gal{gap:6px}.gal .cap{opacity:1}}
 .photo{aspect-ratio:3/2;max-width:640px;background:var(--mist);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--leaf);margin:12px 0 28px}
-.note-box{max-width:38em;margin:0 0 28px;padding:18px 20px;background:var(--panel);
+.note-box{max-width:38em;margin:0 0 28px;padding:16px 20px 18px;background:var(--panel);
   border:1px solid var(--mist);border-left:3px solid var(--bloom);border-radius:12px}
+.note-box h2{font-size:15px;font-family:var(--sans);font-weight:700;color:var(--leaf);
+  letter-spacing:.04em;margin:0 0 8px}
 .note-box p{margin:0 0 .7em;font-size:16.5px;line-height:1.85}
 .note-box p:last-child{margin-bottom:0}
 .big{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:560px;margin:6px 0 20px}
