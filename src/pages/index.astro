@@ -27,14 +27,17 @@ const total = cards.reduce((a, c) => a + c.n, 0);
   </section>
   {GOATCOUNTER && (
     <>
-      <p class="views" id="views" hidden>網站累計瀏覽 <b id="vn">—</b> 次</p>
+      <p class="views" id="views" hidden>網站累計造訪 <b id="vn">—</b> 人次</p>
       <script is:inline set:html={`
       (function(){
-        fetch('https://${GOATCOUNTER}.goatcounter.com/counter/TOTAL.json')
+        var base = 'https://${GOATCOUNTER}.goatcounter.com/counter/TOTAL.json';
+        fetch(base + '?v=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
           .then(function(r){ return r.ok ? r.json() : null; })
           .then(function(d){
-            if (!d || !d.count) return;
-            document.getElementById('vn').textContent = d.count;
+            if (!d) return;
+            var n = d.count || d.count_unique;
+            if (!n) return;
+            document.getElementById('vn').textContent = n;
             document.getElementById('views').hidden = false;
           }).catch(function(){});
       })();`} />
