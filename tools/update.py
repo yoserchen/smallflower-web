@@ -12,7 +12,16 @@
     ├── 主檔.xlsx            從 Google 試算表下載（檔案 → 下載 → Excel）
     ├── 地圖/*.kml           從 My Maps 匯出
     ├── 照片/<花名>/*.jpg    自己補的照片
+    ├── 待標註/              這個月拍的照片，先跑 tools/label.py 標花名
+    ├── 新增記錄.json        標註工具匯出的檔案，會自動收進觀測記錄
     └── FB匯出/              解壓後的 this_profile.. 資料夾（或捷徑）
+
+每個月的流程：
+    1. 把這個月的照片放進 待標註/
+    2. python3 tools/label.py          → 打開 ~/Documents/花曆標註/標註.html 標花名
+    3. 匯出的 新增記錄.json 放到 花曆更新/
+    4. python3 tools/update.py
+    5. npm run build && git add -A && git commit -m "更新" && git push
 
 跑完之後：
     npm run build && git add -A && git commit -m "更新" && git push
@@ -97,6 +106,59 @@ def canon(n):
         seen.add(n); n = rules[n]['併入']
     return n
 
+
+# ---------- 2b. 收進標註工具產出的新記錄 ----------
+OBS_CSV = os.path.join(DATA, '觀測記錄.csv')
+OBS_COLS = ['花名', '日期', '區域', '檔名']
+obs_rows = list(csv.DictReader(open(OBS_CSV, encoding='utf-8-sig'))) if os.path.exists(OBS_CSV) else []
+seen_files = {r['檔名'] for r in obs_rows}
+PHOTO_DIR = os.path.join(IN, '照片')
+PENDING = os.path.join(IN, '待標註')
+added = 0
+for jf in sorted(glob.glob(os.path.join(IN, '新增記錄*.json'))):
+    try:
+        got = json.load(open(jf, encoding='utf-8'))
+    except Exception as e:
+        say(f'  ! 讀不了 {os.path.basename(jf)}：{e}'); continue
+    for r in got.get('records', []):
+        nm, d, z, fn = r.get('n', '').strip(), r.get('d', ''), r.get('z', '').strip(), r.get('f', '')
+        if not nm or not d or fn in seen_files:
+            continue
+        obs_rows.append({'花名': nm, '日期': d, '區域': z, '檔名': fn})
+        seen_files.add(fn); added += 1
+        # 把照片搬到該花的資料夾，之後就跟自己補的照片一樣處理
+        base = os.path.splitext(fn)[0]
+        src = next((os.path.join(PENDING, f) for f in (os.listdir(PENDING) if os.path.isdir(PENDING) else [])
+                    if os.path.splitext(f)[0] == base), None)
+        if src and os.path.exists(src):
+            dst = os.path.join(PHOTO_DIR, canon(nm))
+            os.makedirs(dst, exist_ok=True)
+            try:
+                shutil.move(src, os.path.join(dst, os.path.basename(src)))
+            except Exception as e:
+                say(f'  ! 搬不動 {os.path.basename(src)}：{e}')
+    os.makedirs(os.path.join(DATA, '已匯入'), exist_ok=True)
+    shutil.move(jf, os.path.join(DATA, '已匯入',
+                datetime.datetime.now().strftime('%Y%m%d_%H%M%S_') + os.path.basename(jf)))
+if added:
+    with open(OBS_CSV, 'w', encoding='utf-8-sig', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=OBS_COLS); w.writeheader(); w.writerows(obs_rows)
+    say(f'新記錄 {added} 筆已收進觀測記錄')
+if obs_rows:
+    say(f'觀測記錄累計 {len(obs_rows)} 筆')
+
+# 整理成「花名 -> 月份、筆數、最後拍到、區域」
+obs = {}
+for r in obs_rows:
+    cn = canon(r['花名'].strip())
+    d = r['日期'].strip()
+    if len(d) < 7:
+        continue
+    o = obs.setdefault(cn, {'months': set(), 'n': 0, 'last': '', 'zone': ''})
+    o['months'].add(int(d[5:7])); o['n'] += 1
+    o['last'] = max(o['last'], d)
+    if r['區域'].strip():
+        o['zone'] = ZONE_RENAME.get(r['區域'].strip(), r['區域'].strip())
 
 EXCL = {n for n, r in rules.items() if r['處理方式'] == '不收錄'}
 MAPX = {n for n, r in rules.items() if r['處理方式'] in ('地圖不收錄', '地圖不放')}
@@ -241,6 +303,12 @@ for cn, g in groups.items():
         ind |= indoor.get(r['id'], set())
         if r['id'] in pins:
             pass
+    o = obs.get(cn)
+    if o:
+        months |= o['months']
+        cnt += o['n']
+        last = max(str(last), o['last'])
+        years |= {int(o['last'][:4])}
     has_pin = any(r['id'] in pins for r in g)
     st = rep['fix'] or (fixes[0] if fixes else '') or \
         ('現存' if (str(last) >= CUTOFF or has_pin) else '近年未見')
@@ -260,6 +328,67 @@ for cn, g in groups.items():
     if note:
         rec['t'] = note
     out.append(rec)
+# ---------- 6b. 觀測記錄裡出現、主檔還沒有的花 ----------
+# 每一區的代號前綴與目前最大號，用來配新代號
+zone_prefix, prefix_max = {}, collections.Counter()
+for r in rows:
+    m = re.match(r'(.+)-(\d+)$', r['id'])
+    if not m:
+        continue
+    pre, num = m.group(1), int(m.group(2))
+    prefix_max[pre] = max(prefix_max[pre], num)
+    if r['zone']:
+        zone_prefix.setdefault(r['zone'], collections.Counter())[pre] += 1
+
+have = {x['n'] for x in out}
+fresh = []
+for cn, o in sorted(obs.items()):
+    if cn in have or cn in EXCL:
+        continue
+    z = o['zone']
+    pre = (zone_prefix.get(z).most_common(1)[0][0] if zone_prefix.get(z) else '新')
+    prefix_max[pre] += 1
+    code = f'{pre}-{prefix_max[pre]:02d}'
+    yr = int(o['last'][:4])
+    out.append(dict(id=code, n=cn, m=sum(1 << (k - 1) for k in o['months']),
+                    y=sum(1 << (k - 2023) for k in [yr] if 2023 <= k <= 2026),
+                    c=o['n'], last=o['last'], st='現存', no=[], z=z, p='', i=''))
+    fresh.append({'內部代號': code, '中文名': cn, '區域': z,
+                  '開花月份': ','.join(str(x) for x in sorted(o['months'])),
+                  '最後拍到': o['last'], '記錄數': o['n']})
+    have.add(cn)
+
+if fresh:
+    say()
+    say(f'觀測記錄帶出 {len(fresh)} 種主檔還沒有的花：')
+    for f2 in fresh:
+        say(f"　{f2['內部代號']}　{f2['中文名']}　{f2['區域']}　{f2['開花月份']} 月")
+    nf = os.path.join(IN, '新增物種_待貼到主檔.csv')
+    with open(nf, 'w', encoding='utf-8-sig', newline='') as fh:
+        w = csv.DictWriter(fh, fieldnames=['內部代號', '中文名', '區域', '開花月份', '最後拍到', '記錄數'])
+        w.writeheader(); w.writerows(fresh)
+    say(f'清單寫到 {nf}，方便你貼進 Google 試算表的物種主檔')
+
+    # 待定位 KML：先放在該區中心，匯入 My Maps 之後把點拖到正確位置
+    zf = os.path.join(ROOT, 'src/zones', SLUG + '.json')
+    centres = json.load(open(zf, encoding='utf-8')) if os.path.exists(zf) else {}
+    pts = [(f2, centres[f2['區域']]) for f2 in fresh if f2['區域'] in centres]
+    if pts:
+        kf = os.path.join(IN, '待定位.kml')
+        with open(kf, 'w', encoding='utf-8') as fh:
+            fh.write('<?xml version="1.0" encoding="UTF-8"?>\n'
+                     '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+                     '<name>待定位（' + str(len(pts)) + ' 點）</name>'
+                     '<description>這些點先放在該區中心，請拖到實際位置。名稱不要改。</description>')
+            for f2, ll in pts:
+                fh.write(f"<Placemark><name>{f2['內部代號']} {f2['中文名']}</name>"
+                         f"<Point><coordinates>{ll[1]:.7f},{ll[0]:.7f},0</coordinates></Point></Placemark>")
+            fh.write('</Document></kml>')
+        say(f'{kf} 可以匯入 My Maps，把點拖到實際位置')
+    miss = [f2['中文名'] for f2 in fresh if f2['區域'] not in centres]
+    if miss:
+        say(f'　（{"、".join(miss)} 的區域沒有中心座標，要自己在 My Maps 加點）')
+
 out.sort(key=lambda x: x['n'])
 
 # 跟上次比對
