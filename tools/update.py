@@ -354,20 +354,22 @@ for cn, o in sorted(obs.items()):
                     y=sum(1 << (k - 2023) for k in [yr] if 2023 <= k <= 2026),
                     c=o['n'], last=o['last'], st='現存', no=[], z=z, p='', i=''))
     fresh.append({'內部代號': code, '中文名': cn, '區域': z,
-                  '開花月份': ','.join(str(x) for x in sorted(o['months'])),
-                  '最後拍到': o['last'], '記錄數': o['n']})
+                  '備註': '新的花；開花月份與記錄數由觀測記錄自動帶入，這兩欄請留空',
+                  '_月份': ','.join(str(x) for x in sorted(o['months']))})
     have.add(cn)
 
 if fresh:
     say()
     say(f'觀測記錄帶出 {len(fresh)} 種主檔還沒有的花：')
     for f2 in fresh:
-        say(f"　{f2['內部代號']}　{f2['中文名']}　{f2['區域']}　{f2['開花月份']} 月")
+        say(f"　{f2['內部代號']}　{f2['中文名']}　{f2['區域']}　{f2['_月份']} 月")
     nf = os.path.join(IN, '新增物種_待貼到主檔.csv')
     with open(nf, 'w', encoding='utf-8-sig', newline='') as fh:
-        w = csv.DictWriter(fh, fieldnames=['內部代號', '中文名', '區域', '開花月份', '最後拍到', '記錄數'])
+        w = csv.DictWriter(fh, fieldnames=['內部代號', '中文名', '區域', '備註'],
+                           extrasaction='ignore')
         w.writeheader(); w.writerows(fresh)
-    say(f'清單寫到 {nf}，方便你貼進 Google 試算表的物種主檔')
+    say(f'清單寫到 {nf}，可以貼進 Google 試算表的物種主檔')
+    say('　（只貼代號、中文名、區域三欄，月份和記錄數留空，那兩欄會自動算）')
 
     # 待定位 KML：先放在該區中心，匯入 My Maps 之後把點拖到正確位置
     zf = os.path.join(ROOT, 'src/zones', SLUG + '.json')
