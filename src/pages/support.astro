@@ -1,22 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SPONSOR_500_URL, SPONSOR_1000_URL } from '../config.mjs';
+import { SPONSOR_500_URL, SPONSOR_1000_URL, AUTHOR } from '../config.mjs';
 const tiers = [
-  { amt: 500, text: '你的名字會列在網站的感謝花友名單。', href: SPONSOR_500_URL },
-  { amt: 1000, text: '名字列在網站，也印在口袋地圖的致謝欄；地圖出版後寄一份給你。', href: SPONSOR_1000_URL, main: true },
+  { amt: 500, text: '支持小花老師繼續記錄與分享更多花的資訊。', href: SPONSOR_500_URL },
+  { amt: 1000, text: '支持小花老師之外，還可以在口袋地圖出版時優先保留一份，親送或寄送給您。', href: SPONSOR_1000_URL, main: true },
 ];
 ---
 <Base title="支持這份花曆" current="support" description="贊助小花老師的花曆，支持這份記錄繼續下去。">
   <section>
     <h1>支持這份花曆</h1>
-    <p class="sub">花曆的資料全部來自小花老師每週實地拍攝的記錄，網站免費使用。如果它幫你找到了想拍的花，歡迎贊助。</p>
+    <p class="sub">花曆的資料全部來自{AUTHOR}實地拍攝的記錄，網站的建構全部由他出錢出力完成，全部開放免費使用。
+      如果您想對{AUTHOR}的這份熱忱給予實質的幫忙，歡迎您加入贊助的行列。</p>
     <div class="tiers">
       {tiers.map((t) => (
         <div class={'tier' + (t.main ? ' main' : '')}>
           <div class="amt">{t.amt}<small>元</small></div>
           <p>{t.text}</p>
           {t.href
-            ? <a class="btn solid" href={t.href} rel="noopener">前往贊助</a>
+            ? <a class="btn solid" href={t.href} rel="noopener" target="_blank">我要贊助</a>
             : <span class="btn" aria-disabled="true">贊助連結準備中</span>}
         </div>
       ))}

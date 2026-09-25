@@ -55,8 +55,14 @@ const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
   <main class="wrap"><slot /></main>
   <footer><div class="wrap">
     {cal && <><a href="/">← 看其他花曆</a><br /></>}
-    {BRAND}　資料與照片版權屬{AUTHOR}所有　<a href={FB_URL} rel="noopener">FB 粉絲專頁</a>{YOUTUBE_URL && <> ・ <a href={YOUTUBE_URL} rel="noopener">YouTube 小花視界</a></>}<br />
-    花期是實地拍到開花的月份，每年會前後移動。
+    <p class="disc">本網站資料為{AUTHOR}拍攝之花卉參考，僅供觀覽之用，非作為學術上或花卉比對之作用。
+      花名或有誤植、圖片錯置，也請多多指正。
+      每月的花卉數量是指{AUTHOR}拍到的紀錄，並非實際的數字，也請參酌。<br />
+      更多花訊請參考 FB 粉絲專頁「<a href={FB_URL} rel="noopener">{AUTHOR}</a>」，
+      {YOUTUBE_URL
+        ? <>更多植物園拍花導覽請到 YouTube <a href={YOUTUBE_URL} rel="noopener">小花視界</a>觀看。</>
+        : <>更多植物園拍花導覽請到 YouTube「小花視界」觀看。</>}</p>
+    <p class="cr">{BRAND}　資料與照片版權屬{AUTHOR}所有</p>
   </div></footer>
   <button id="totop" type="button" aria-label="回到最上面" hidden>
     <svg viewBox="0 0 24 24" aria-hidden="true" width="22" height="22"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -74,6 +80,8 @@ const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
   })();
   </script>
   <style>
+  footer .disc{max-width:46em;margin:0 0 10px;line-height:1.85}
+  footer .cr{margin:0}
   #totop{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));
     z-index:20;width:46px;height:46px;border-radius:50%;border:1px solid var(--mist);
     background:var(--paper);color:var(--ink);display:grid;place-items:center;cursor:pointer;

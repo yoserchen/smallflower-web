@@ -27,9 +27,11 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
         : '這一株已經不在園區了，記錄保留供參考。'}</p>
     )}
     {pics ? (
-      <figure class="gal" data-n={pics.ph.length}>
+      <figure class="gal" data-n={pics.ph.length} id="gal">
         {pics.ph.map((p, k) => (
-          <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${p.i}.jpg`} target="_blank" rel="noopener">
+          <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${p.i}.jpg`}
+             data-k={k} data-full={`/p/${pics.s}/${p.i}.jpg`}
+             data-date={p.d ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日' : ''}>
             <img src={`/p/${pics.s}/${p.i}${k === 0 ? '' : 't'}.jpg`} alt={`${s.n}　${p.d}`}
                  loading={k === 0 ? 'eager' : 'lazy'} decoding="async" />
             {p.d && <span class="cap">{k === 0
@@ -37,7 +39,7 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
               : p.d.slice(0, 7).replace('-', '.')}</span>}
           </a>
         ))}
-        <figcaption>點照片看大圖</figcaption>
+        <figcaption>點照片看大圖{pics.ph.length > 1 && '，可以左右切換'}</figcaption>
       </figure>
     ) : (
       <div class="photo"><span>照片準備中</span></div>
@@ -86,6 +88,70 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
       <div class="list">{nearby.map((x) => <Row s={x} slug={cal.slug} />)}</div>
     </section>
   )}
+  {pics && (
+    <div id="lb" hidden data-n={pics.ph.length}>
+      <button class="x" type="button" aria-label="關閉">&#10005;</button>
+      <button class="nav prev" type="button" aria-label="上一張">&#8249;</button>
+      <img id="lbimg" alt="" />
+      <button class="nav next" type="button" aria-label="下一張">&#8250;</button>
+      <p class="meta"><span id="lbdate"></span><span id="lbn"></span></p>
+    </div>
+  )}
+  {pics && (
+    <script is:inline>
+    (function () {
+      var gal = document.getElementById('gal');
+      var lb = document.getElementById('lb');
+      if (!gal || !lb) return;
+      var links = [].slice.call(gal.querySelectorAll('a[data-full]'));
+      var img = document.getElementById('lbimg');
+      var dateEl = document.getElementById('lbdate');
+      var nEl = document.getElementById('lbn');
+      var cur = 0;
+      function show(i) {
+        cur = (i + links.length) % links.length;
+        var a = links[cur];
+        img.src = a.dataset.full;
+        img.alt = a.querySelector('img').alt;
+        dateEl.textContent = a.dataset.date || '';
+        nEl.textContent = links.length > 1 ? (cur + 1) + ' / ' + links.length : '';
+      }
+      function open(i) {
+        show(i);
+        lb.hidden = false;
+        document.body.style.overflow = 'hidden';
+      }
+      function close() {
+        lb.hidden = true;
+        document.body.style.overflow = '';
+      }
+      links.forEach(function (a, i) {
+        a.addEventListener('click', function (e) {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault(); open(i);
+        });
+      });
+      lb.querySelector('.x').addEventListener('click', close);
+      lb.querySelector('.prev').addEventListener('click', function (e) { e.stopPropagation(); show(cur - 1); });
+      lb.querySelector('.next').addEventListener('click', function (e) { e.stopPropagation(); show(cur + 1); });
+      lb.addEventListener('click', function (e) { if (e.target === lb || e.target === img) close(); });
+      document.addEventListener('keydown', function (e) {
+        if (lb.hidden) return;
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowLeft') show(cur - 1);
+        if (e.key === 'ArrowRight') show(cur + 1);
+      });
+      var x0 = null;
+      lb.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+      lb.addEventListener('touchend', function (e) {
+        if (x0 === null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1));
+        x0 = null;
+      }, { passive: true });
+    })();
+    </script>
+  )}
 </Base>
 <style>
 .crumb{font-size:14px;color:var(--leaf);margin:24px 0 4px}
@@ -105,6 +171,21 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .gal a:hover .cap,.gal a:focus-visible .cap{opacity:1}
 .gal figcaption{grid-column:1/-1;font-size:13px;color:var(--leaf);margin-top:2px}
 @media (max-width:560px){.gal{gap:6px}.gal .cap{opacity:1}}
+#lb{position:fixed;inset:0;z-index:50;background:rgba(10,16,13,.94);
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:16px}
+#lb[hidden]{display:none}
+#lb img{grid-column:2;max-width:100%;max-height:86vh;margin:0 auto;display:block;
+  object-fit:contain;border-radius:8px;cursor:zoom-out}
+#lb .meta{grid-column:1/-1;grid-row:2;text-align:center;color:#D6E0D3;font-size:14px;margin:10px 0 0;
+  display:flex;gap:14px;justify-content:center}
+#lb .x{position:absolute;top:14px;right:16px;width:42px;height:42px;border-radius:50%;
+  border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;line-height:1}
+#lb .nav{width:52px;height:78px;border:0;border-radius:10px;background:rgba(255,255,255,.1);
+  color:#fff;font-size:34px;cursor:pointer;line-height:1}
+#lb .nav:hover,#lb .x:hover{background:rgba(255,255,255,.22)}
+#lb[data-n="1"] .nav{visibility:hidden}
+.gal a{cursor:zoom-in}
+@media (max-width:620px){#lb{padding:10px;gap:4px}#lb .nav{width:40px;height:64px;font-size:26px}}
 .photo{aspect-ratio:3/2;max-width:640px;background:var(--mist);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--leaf);margin:12px 0 28px}
 .note-box{max-width:38em;margin:0 0 28px;padding:16px 20px 18px;background:var(--panel);
   border:1px solid var(--mist);border-left:3px solid var(--bloom);border-radius:12px}

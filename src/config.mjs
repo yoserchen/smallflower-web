@@ -5,8 +5,8 @@ export const DOMAIN = 'smallflower.tw';
 export const FB_URL = 'https://www.facebook.com/smallflower.tw';
 export const YOUTUBE_URL = 'https://www.youtube.com/@%E5%B0%8F%E8%8A%B1%E8%A6%96%E7%95%8C';        // 小花視界頻道網址，填了才會出現連結
 export const GOATCOUNTER = 'smallflowert';       // GoatCounter 代號，填了首頁才會顯示瀏覽次數
-export const SPONSOR_500_URL = '';    // Portaly 500 元方案連結
-export const SPONSOR_1000_URL = '';   // Portaly 1000 元方案連結
+export const SPONSOR_500_URL = 'https://forms.gle/pvtX6uG9Wjw5RcpdA';     // 贊助表單（500）
+export const SPONSOR_1000_URL = 'https://forms.gle/pvtX6uG9Wjw5RcpdA';    // 贊助表單（1000）
 export const MONTHS = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
 // 每個花曆一筆。slug 要和 src/data/<slug>.json 同名。
