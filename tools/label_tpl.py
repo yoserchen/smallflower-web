@@ -18,6 +18,12 @@ h1{font-family:var(--serif);font-size:20px;margin:0 16px 0 0}
 .btn.solid{background:var(--bloom);border-color:var(--bloom);color:#fff}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .stat{margin-left:auto;font-size:14px;color:var(--leaf);font-variant-numeric:tabular-nums}
+.def{font-size:14px;color:var(--leaf);display:flex;align-items:center;gap:6px}
+.def select{width:auto;padding:5px 8px}
+.row2{display:grid;grid-template-columns:1fr 84px;gap:6px}
+.row2 select{display:block}
+.t-花{color:var(--ink)}
+.card.other{border-color:var(--mist);opacity:.92}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding:18px 20px 80px}
 .card{background:var(--panel);border:1px solid var(--mist);border-radius:14px;overflow:hidden;
   display:flex;flex-direction:column}
@@ -27,6 +33,8 @@ h1{font-family:var(--serif);font-size:20px;margin:0 16px 0 0}
 .body{padding:9px 10px 11px;display:grid;gap:6px}
 .dt{font-size:12px;color:var(--leaf);display:flex;justify-content:space-between;align-items:center}
 .badge{font-size:11px;background:var(--bloom);color:#fff;border-radius:999px;padding:1px 8px}
+.gps{font-size:11px;background:var(--mist);color:var(--leaf);border-radius:999px;padding:1px 8px;margin-left:4px}
+.card.neu .gps{background:var(--leaf);color:#fff}
 input,select{font:inherit;font-size:14px;width:100%;padding:7px 9px;border:1px solid var(--mist);
   border-radius:8px;background:var(--paper);color:var(--ink)}
 input:focus,select:focus{border-color:var(--bloom);outline:none}
@@ -42,6 +50,10 @@ select{display:none}
 <body>
 <header>
   <h1>花曆標註</h1>
+  <label class="def">這批預設
+    <select id="defT"><option>花</option><option>植株</option><option>果</option><option>葉</option><option>其他</option></select>
+  </label>
+  <button class="btn" id="allT">全部套用預設</button>
   <button class="btn" id="same">和上一張同名（S）</button>
   <button class="btn" id="skipAll">把空白的標成不收錄</button>
   <button class="btn solid" id="exp">匯出 新增記錄.json</button>
@@ -50,6 +62,9 @@ select{display:none}
 <p class="hint">
   在每張照片下面打花名，打兩三個字會自動列出候選。<b>打完按 Enter 跳下一張</b>；按 S 沿用上一張的花名（連拍很好用）。<br />
   主檔裡沒有的花名會變成<b style="color:var(--bloom)">粉紅色框</b>並要求你選區域 —— 那表示這是新增的花。確定名字沒打錯再送出。<br />
+  有 GPS 的照片會顯示<b>灰色的「GPS ○○區」標籤</b>，區域自動帶入，通常不用改。<br />
+  花名右邊的下拉是<b>部位</b>，預設「花」。<b>只有標成「花」的才會算進開花月份和記錄數</b>；
+  植株、果、葉只當照片用。整批都是植株照的話，上面選「植株」再按「全部套用預設」。<br />
   標好的會自動存在瀏覽器裡，關掉再開還在。全部標完按「匯出」，把檔案放到 <code>花曆更新/</code> 底下。
 </p>
 <div class="grid" id="g"></div>
@@ -63,6 +78,7 @@ try { mark = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { mark =
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(mark)); } catch (e) {} };
 const known = DATA.species;            // 花名 -> 區域
 const names = Object.keys(known);
+const PARTS = ['花', '植株', '果', '葉', '其他'];
 const $ = (id) => document.getElementById(id);
 
 const dl = $('names');
@@ -79,17 +95,23 @@ function draw() {
     c.innerHTML =
       '<img loading="lazy" decoding="async" src="thumbs/' + p.f + '" alt="" />' +
       '<div class="body">' +
-        '<span class="dt"><span>' + (p.d || '沒有日期') + '</span>' +
+        '<span class="dt"><span>' + (p.d || '沒有日期') +
+        (p.gz ? '<span class="gps">GPS ' + p.gz + '</span>' : '') + '</span>' +
         (isNew(m.n) ? '<span class="badge">新的花</span>' : '') + '</span>' +
-        '<input list="names" placeholder="花名" data-i="' + i + '" />' +
-        '<select data-i="' + i + '"></select>' +
+        '<div class="row2">' +
+          '<input list="names" placeholder="花名" data-i="' + i + '" />' +
+          '<select class="part" data-i="' + i + '">' + PARTS.map(function (x) {
+            return '<option' + ((m.t || '花') === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        '<select class="zone" data-i="' + i + '"></select>' +
       '</div>';
     const inp = c.querySelector('input');
     inp.value = m.n || '';
-    const sel = c.querySelector('select');
+    const sel = c.querySelector('select.zone');
     sel.innerHTML = '<option value="">選擇區域…</option>' +
       DATA.zones.map((z) => '<option>' + z + '</option>').join('');
-    sel.value = m.z || '';
+    sel.value = m.z || p.gz || '';
     f.appendChild(c);
   });
   $('g').replaceChildren(f);
@@ -97,9 +119,10 @@ function draw() {
 }
 function count() {
   const done = DATA.photos.filter((p) => mark[p.f] && mark[p.f].n).length;
+  const np = DATA.photos.filter((p) => mark[p.f] && mark[p.f].n && (mark[p.f].t || '花') !== '花').length;
   const neu = new Set(DATA.photos.filter((p) => mark[p.f] && isNew(mark[p.f].n)).map((p) => mark[p.f].n));
   $('stat').textContent = '已標 ' + done + ' / ' + DATA.photos.length +
-    (neu.size ? '　新的花 ' + neu.size + ' 種' : '');
+    (neu.size ? '　新的花 ' + neu.size + ' 種' : '') + (np ? '　非花 ' + np + ' 張' : '');
 }
 function setName(i, v) {
   const p = DATA.photos[i];
@@ -108,11 +131,19 @@ function setName(i, v) {
   else {
     mark[p.f] = Object.assign({}, mark[p.f], { n: v });
     if (v in known) mark[p.f].z = known[v];
+    else if (p.gz && !mark[p.f].z) mark[p.f].z = p.gz;
   }
   save();
 }
 $('g').addEventListener('input', (e) => {
   const i = +e.target.dataset.i;
+  if (e.target.classList.contains('part')) {
+    const p = DATA.photos[i];
+    if (!mark[p.f]) mark[p.f] = {};
+    mark[p.f].t = e.target.value;
+    save(); count();
+    return;
+  }
   if (e.target.tagName === 'INPUT') {
     setName(i, e.target.value);
     const card = e.target.closest('.card');
@@ -121,8 +152,9 @@ $('g').addEventListener('input', (e) => {
     const b = card.querySelector('.badge');
     if (isNew(v) && !b) card.querySelector('.dt').insertAdjacentHTML('beforeend', '<span class="badge">新的花</span>');
     if (!isNew(v) && b) b.remove();
-    const sel = card.querySelector('select');
+    const sel = card.querySelector('select.zone');
     if (v in known) sel.value = known[v];
+    else if (DATA.photos[i].gz && !sel.value) sel.value = DATA.photos[i].gz;
     count();
   } else {
     const p = DATA.photos[i];
@@ -155,6 +187,12 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+$('allT').onclick = () => {
+  const v = $('defT').value;
+  if (!confirm('把這一批全部設成「' + v + '」？')) return;
+  DATA.photos.forEach((p) => { mark[p.f] = Object.assign({}, mark[p.f], { t: v }); });
+  save(); draw();
+};
 $('same').onclick = () => {
   const all = [].slice.call(document.querySelectorAll('.card input'));
   let last = '';
@@ -174,7 +212,9 @@ $('exp').onclick = () => {
     const m = mark[p.f];
     if (!m || !m.n || m.n === '不收錄') return;
     if (isNew(m.n) && !m.z) { return; }
-    out.push({ f: p.f, d: p.d, n: m.n, z: m.z || known[m.n] || '' });
+    const rec = { f: p.f, d: p.d, n: m.n, z: m.z || p.gz || known[m.n] || '', t: m.t || '花' };
+    if (p.ll) { rec.lat = p.ll[0]; rec.lon = p.ll[1]; }
+    out.push(rec);
   });
   const missing = DATA.photos.filter((p) => {
     const m = mark[p.f];

@@ -149,14 +149,24 @@ if os.path.isdir(EXTRA):
             pass
         return int(os.path.getmtime(path))
 
+    # 標註工具說過「這張不是花」的檔名（植株／果／葉／其他），挑片時不要排前面
+    try:
+        PARTS = json.load(open(os.path.join(EXTRA, '.部位.json'), encoding='utf-8'))
+    except Exception:
+        PARTS = {}
+    if PARTS:
+        print(f'非花照片 {len(PARTS)} 張（植株／果／葉），不會被選成第一張')
+
     def add_extra(nm, path):
         global n_extra
         nm = alias.get(nm, nm)
         if nm not in names:
             print(f'  ! 補充照片的花名對不到主檔，略過：{nm}')
             return
+        part = PARTS.get(os.path.splitext(os.path.basename(path))[0], '')
         idx.setdefault(nm, {})[path] = {'ts': shot_time(path),
-                                        'album': '自己補的', 'own': True}
+                                        'album': '自己補的' + (f'・{part}' if part else ''),
+                                        'own': not part, 'part': part}
         n_extra += 1
     for e in sorted(os.listdir(EXTRA)):
         p = os.path.join(EXTRA, e)
@@ -220,6 +230,8 @@ for nm, photos in sorted(idx.items()):
         score = sharp * 1.0 + center * 0.6 + max(0, yr - 2023) * 3.0
         if meta.get('own'):
             score += 10000          # 自己補的照片一律優先
+        elif meta.get('part'):
+            score -= 5000           # 植株／果／葉：沒有花的照片可用時才拿來頂
         tn = ImageOps.fit(im, (220, 220), Image.LANCZOS, centering=(.5, .45))
         tn.save(os.path.join(td, f'{k}.jpg'), 'JPEG', quality=58, optimize=True)
         rows.append({'k': k, 'p': path, 'ts': meta['ts'], 'a': meta['album'],
