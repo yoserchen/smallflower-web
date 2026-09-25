@@ -2,7 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import Clock from '../../../components/Clock.astro';
 import Row from '../../../components/Row.astro';
-import { LIVE_CALENDARS, liveOf, monthCountOf, has, byNo } from '../../../lib.mjs';
+import { LIVE_CALENDARS, liveOf, monthCountOf, has, byNo, photosOf } from '../../../lib.mjs';
 import { MONTHS } from '../../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.flatMap((c) =>
@@ -15,9 +15,11 @@ const counts = monthCountOf(cal.slug);
 const live = liveOf(cal.slug);
 const list = live.filter((s) => has(s, m)).sort(byNo);
 const zones = [...new Set(list.map((s) => s.z).filter(Boolean))].sort();
+const first = list.map((x) => photosOf(cal.slug, x)).find((p) => p && p.ph.length);
+const share = first ? `/p/${first.s}/${first.ph[0].i}.jpg` : '/og.jpg';
 ---
 <Base title={`${MONTHS[m - 1]}開的花`} cal={cal} current="month"
-      description={`${cal.place}${MONTHS[m - 1]}開的 ${list.length} 種花。`}>
+      description={`${cal.place}${MONTHS[m - 1]}開的 ${list.length} 種花。`} image={share}>
   <div class="hero">
     <Clock counts={counts} slug={cal.slug} active={m} total={live.length} />
     <div>

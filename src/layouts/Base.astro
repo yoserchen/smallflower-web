@@ -2,10 +2,12 @@
 import '../styles/global.css';
 import { BRAND, AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 import { LIVE_CALENDARS } from '../lib.mjs';
-const { title, description = `${AUTHOR}的花曆：什麼時候開、開在哪裡。`, cal = null, current = '' } = Astro.props;
+const { title, description = `${AUTHOR}的花曆：什麼時候開、開在哪裡。`,
+        cal = null, current = '', image = '/og.jpg', imageAlt = '' } = Astro.props;
 const suffix = cal ? cal.name : BRAND;
 const full = title ? `${title}｜${suffix}` : suffix;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
 // 站內頁（贊助、關於）在只有一本花曆時，選單也帶出那本的月份與地圖
 const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
 ---
@@ -21,6 +23,16 @@ const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="zh_TW" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:site_name" content={BRAND} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:alt" content={imageAlt || full} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={full} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="author" content={AUTHOR} />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

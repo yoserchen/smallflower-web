@@ -12,11 +12,12 @@ const { cal, s } = Astro.props;
 const ms = monthsOf(s), ys = yearsOf(s);
 const pics = photosOf(cal.slug, s);
 const zoneUrl = zoneMapUrl(cal.slug, s.z);
+const share = pics && pics.ph.length ? `/p/${pics.s}/${pics.ph[0].i}.jpg` : '/og.jpg';
 const sheets = [...new Set(s.no.map((n) => n.split('-')[0]))];
 const nearby = liveOf(cal.slug).filter((x) => x.z && x.z === s.z && x.id !== s.id && ms.some((m) => has(x, m))).slice(0, 8);
 const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''}拍到開花${s.z ? '，位於' + s.z : ''}。`;
 ---
-<Base title={s.n} cal={cal} description={desc}>
+<Base title={s.n} cal={cal} description={desc} image={share} imageAlt={`${s.n}｜${AUTHOR}攝`}>
   <section>
     <p class="crumb"><a href={`/${cal.slug}/`}>{cal.name}</a>{s.z && <span> ／ {s.z}</span>}</p>
     <h1>{s.n}</h1>
