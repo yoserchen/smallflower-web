@@ -1,17 +1,85 @@
 ---
 import Base from '../layouts/Base.astro';
-import { FB_URL, YOUTUBE_URL, BRAND } from '../config.mjs';
-import { LIVE_CALENDARS, speciesOf } from '../lib.mjs';
-const total = LIVE_CALENDARS.reduce((a, c) => a + speciesOf(c.slug).length, 0);
+import { FB_URL, YOUTUBE_URL, BRAND, AUTHOR } from '../config.mjs';
+import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
+const total = LIVE_CALENDARS.reduce((a, c) => a + liveOf(c.slug).length, 0);
+const books = [
+  {
+    t: '花精靈',
+    url: 'https://readmoo.com/book/210501281000101',
+    d: '結合花、攝影與故事創作的書。從精靈的樣貌、花名的諧音梗，一路寫到四篇長篇連載；還設計了創意練習讓讀者一起發想，並收錄近兩百科花卉、一百九十二種的分科紀錄。',
+  },
+  {
+    t: '路',
+    url: 'https://readmoo.com/book/210500479000101',
+    d: '記錄前後將近五十年的求學、工作與生活。章節不按時間順序，而是以舊式錄音機的播放形式編排：暫停、快轉、準備、倒帶、播放。',
+  },
+  {
+    t: '媽媽的味道',
+    url: 'https://readmoo.com/book/210501240000101',
+    d: '分成兩篇。前篇「媽媽的料理」記下四十多道菜，後篇描述「媽媽的生活」。',
+  },
+];
 ---
-<Base title="關於" current="about">
-  <section style="max-width:40em">
+<Base title="關於" current="about"
+      description={`${BRAND}是${AUTHOR}長期在台北植物園拍花的記錄整理，目前收錄 ${total.toLocaleString()} 種。`}>
+  <section class="about">
     <h1>關於</h1>
-    <p>小花老師長期在台北植物園記錄開花，每週在 <a href={FB_URL} rel="noopener">FB 粉絲專頁</a>分享，
-      {YOUTUBE_URL ? <>也在 YouTube <a href={YOUTUBE_URL} rel="noopener">小花視界</a>介紹拍到的花，</> : '也在 YouTube「小花視界」介紹拍到的花，'}
-      著有《花精靈》。</p>
-    <p>{BRAND}整理自 2023 年以來的實地拍攝記錄，目前收錄 {total.toLocaleString()} 種。月份代表曾在這個月拍到開花，每年實際的花期會前後移動。</p>
-    <p>網站上的位置只標到區域。每一株的精確位置印在口袋地圖上，這樣也順便保護稀有植物，不會被照著座標一窩蜂去踩。</p>
-    <p>更多地點的花曆記錄正在整理，之後會陸續加進來。</p>
+
+    <p>「{BRAND}」網站，是{AUTHOR}長期在台北植物園拍花的記錄整理。幾年來去過台北植物園超過一千次，
+      拍到的花超過一千三百種，數萬張的照片。最近兩三年還舉辦「和{AUTHOR}一起到植物園拍小花」的活動五十幾場，
+      和超過一千人次的花友們，在植物園的每個角落留下歡欣的拍花足跡。</p>
+
+    <p>{AUTHOR}每天在 <a href={FB_URL} rel="noopener">FB 粉絲專頁</a>分享他拍到的花和昆蟲，
+      {YOUTUBE_URL
+        ? <>也在 YouTube <a href={YOUTUBE_URL} rel="noopener">小花視界</a>頻道</>
+        : <>也在 YouTube「小花視界」頻道</>}
+      把台北植物園的各區拍花導覽拍成影片。為了讓更多人欣賞到台北植物園的美，
+      也為了讓喜愛拍花的好友能夠更順利找到花，才有做這個花曆網站，以及「台北植物園口袋地圖」的想法。</p>
+
+    <h2>關於資料</h2>
+
+    <p>花曆的資料整理自 2023 年開始，目前收錄 {total.toLocaleString()} 種。
+      月份顯示非絕對精準，代表曾在這個月拍到開花；如果沒有拍到，也不一定代表沒有花，這部分資料會陸續補充修正。</p>
+
+    <p>關於花的位置，網站上只標到該朵花所在的區域（例如薑區），每一株的精確位置印在口袋地圖上。
+      那也是我在地圖上標註的結果，非實際的精確經緯度，僅供參考。
+      有些地點，例如方舟溫室及蘭房、荷花池邊角落野花園等等，因為區域小、花又很多，加上歷年資料的疊加，
+      所以只是把花點標註在該區域，並非確實的位置。這一點有實際執行上的困難，也請多多體諒。
+      之後有發現新的花，也會不定期更新。</p>
+
+    <h2>關於支持</h2>
+
+    <p>花曆的資料全部來自{AUTHOR}實地拍攝的記錄，網站的建構也是自己出錢出力完成，全部開放免費使用。
+      未來還有機會新增其他地點的花曆。如果您想對{AUTHOR}的這份熱忱給予實質的幫忙，
+      歡迎您加入 <a href="/support/">贊助</a>的行列。</p>
+
+    <h2>{AUTHOR}的書</h2>
+
+    <p>除了花曆之外，{AUTHOR}也出了三本書，現在已經轉成電子書格式，在讀墨平台可以看到，也歡迎大家參考閱讀。</p>
+
+    <ul class="books">
+      {books.map((b) => (
+        <li>
+          <a href={b.url} rel="noopener" target="_blank"><b>{b.t}</b></a>
+          <span>{b.d}</span>
+        </li>
+      ))}
+    </ul>
+
+    <p class="end">如果您對這個網站有想法，或者發現網站有錯誤的資料，
+      歡迎到 <a href={FB_URL} rel="noopener">FB 粉絲專頁</a>與{AUTHOR}聯絡。感謝您的支持與鼓勵！</p>
   </section>
 </Base>
+<style>
+.about{max-width:40em}
+.about h2{font-size:22px;margin:32px 0 6px}
+.about p{margin:0 0 16px;line-height:1.9}
+.books{list-style:none;padding:0;margin:8px 0 20px;display:grid;gap:12px}
+.books li{padding:14px 16px;border:1px solid var(--mist);border-radius:12px;background:var(--panel)}
+.books b{font-family:var(--serif);font-size:19px}
+.books a{text-decoration:none}
+.books a:hover b{text-decoration:underline}
+.books span{display:block;margin-top:5px;font-size:15px;color:var(--leaf);line-height:1.8}
+.end{margin-top:28px;padding-top:18px;border-top:1px solid var(--mist)}
+</style>
