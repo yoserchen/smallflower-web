@@ -31,9 +31,12 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
         {pics.ph.map((p, k) => (
           <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${p.i}.jpg`}
              data-k={k} data-full={`/p/${pics.s}/${p.i}.jpg`}
-             data-date={p.d ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日' : ''}>
-            <img src={`/p/${pics.s}/${p.i}${k === 0 ? '' : 't'}.jpg`} alt={`${s.n}　${p.d}`}
+             data-date={(p.d ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日' : '')
+                        + (p.t ? '　' + p.t : '')}>
+            <img src={`/p/${pics.s}/${p.i}${k === 0 ? '' : 't'}.jpg`}
+                 alt={`${s.n}${p.t ? '的' + p.t : ''}　${p.d}`}
                  loading={k === 0 ? 'eager' : 'lazy'} decoding="async" />
+            {p.t && <span class="part">{p.t}</span>}
             {p.d && <span class="cap">{k === 0
               ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日'
               : p.d.slice(0, 7).replace('-', '.')}</span>}
@@ -168,6 +171,9 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .gal .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 10px 6px;font-size:12px;line-height:1.4;
   color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.55));opacity:0;transition:opacity .15s}
 .gal .big .cap{font-size:13px;opacity:1}
+.gal .part{position:absolute;left:7px;top:7px;padding:2px 8px;border-radius:999px;
+  font-size:11px;line-height:1.7;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(2px)}
+.gal .big .part{font-size:12px;left:10px;top:10px}
 .gal a:hover .cap,.gal a:focus-visible .cap{opacity:1}
 .gal figcaption{grid-column:1/-1;font-size:13px;color:var(--leaf);margin-top:2px}
 @media (max-width:560px){.gal{gap:6px}.gal .cap{opacity:1}}

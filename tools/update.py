@@ -183,6 +183,10 @@ for r in obs_rows:
     except (TypeError, ValueError):
         pass
 
+# 「記錄部位」欄的意思是「除了花，還拍到什麼」。植株、其他只是照片屬性，不寫進這一欄，
+# 不然一朵拍過花的花會變成只寫「植株」，看起來像沒拍到花。
+PART_IN_MASTER = {'果', '葉'}
+
 EXCL = {n for n, r in rules.items() if r['處理方式'] == '不收錄'}
 MAPX = {n for n, r in rules.items() if r['處理方式'] in ('地圖不收錄', '地圖不放')}
 json.dump({n: canon(n) for n, r in rules.items() if r['處理方式'] == '合併'},
@@ -349,7 +353,7 @@ for cn, g in groups.items():
     o = obs.get(cn)
     if o:
         months |= o['months']
-        parts |= {x for x in o['parts'] if x != '花'}
+        parts |= o['parts'] & PART_IN_MASTER
         cnt += o['n']
         last = max(str(last), o['last'])
         years |= {int(o['last'][:4])}
@@ -400,7 +404,7 @@ for cn, o in sorted(obs.items()):
     out.append(dict(id=code, n=cn, m=sum(1 << (k - 1) for k in o['months']),
                     y=sum(1 << (k - 2023) for k in [yr] if 2023 <= k <= 2026),
                     c=o['n'], last=o['last'], st='現存', no=[], z=z,
-                    p='、'.join(sorted(x for x in o['parts'] if x != '花')), i=''))
+                    p='、'.join(sorted(o['parts'] & PART_IN_MASTER)), i=''))
     fresh.append({'內部代號': code, '中文名': cn, '區域': z,
                   '備註': ('新的花；開花月份與記錄數由觀測記錄自動帶入，這兩欄請留空'
                            if o['months'] else

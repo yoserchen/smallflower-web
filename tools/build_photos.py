@@ -236,6 +236,7 @@ for nm, photos in sorted(idx.items()):
         tn.save(os.path.join(td, f'{k}.jpg'), 'JPEG', quality=58, optimize=True)
         rows.append({'k': k, 'p': path, 'ts': meta['ts'], 'a': meta['album'],
                      'sc': round(score, 1), 'own': bool(meta.get('own')),
+                     't': meta.get('part', ''),
                      'd': datetime.date.fromtimestamp(meta['ts']).isoformat() if meta['ts'] else ''})
         done += 1
         if done % 500 == 0:
@@ -325,7 +326,10 @@ for nm, info in sorted(scored.items()):
         big.save(f'{d}/{i}.jpg', 'JPEG', quality=78, optimize=True, progressive=True)
         th = ImageOps.fit(im, (480, 480), Image.LANCZOS, centering=(.5, .45))
         th.save(f'{d}/{i}t.jpg', 'JPEG', quality=72, optimize=True)
-        items.append({'i': i, 'd': r['d'], 'a': r['a']})
+        it = {'i': i, 'd': r['d'], 'a': r['a']}
+        if r.get('t'):
+            it['t'] = r['t']          # 網站上會在照片角落標「植株」「果」
+        items.append(it)
         nfiles += 2
     if items:
         meta_out[nm] = {'s': info['s'], 'ph': items}

@@ -7322,15 +7322,6 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>舟-157 蕉蘭</name>
-        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
-        <Point>
-          <coordinates>
-            121.509682,25.032806,0
-          </coordinates>
-        </Point>
-      </Placemark>
-      <Placemark>
         <name>舟-158 裂唇小柱蘭</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
@@ -7570,15 +7561,6 @@
         <Point>
           <coordinates>
             121.509327,25.032778,0
-          </coordinates>
-        </Point>
-      </Placemark>
-      <Placemark>
-        <name>舟-186 羊耳蒜</name>
-        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
-        <Point>
-          <coordinates>
-            121.509295,25.03279,0
           </coordinates>
         </Point>
       </Placemark>
@@ -12433,6 +12415,24 @@
         <Point>
           <coordinates>
             121.510464,25.0321307,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>地-28 玉蘭花</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5104504,25.0329119,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>雙-04 #05 山黃梔</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5103471,25.032822,0
           </coordinates>
         </Point>
       </Placemark>
