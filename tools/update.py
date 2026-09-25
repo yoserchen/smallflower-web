@@ -189,6 +189,22 @@ for f in kmls:
             pass
 say(f'　讀到 {sum(len(v) for v in pins.values())} 個點、{len(pins)} 個代號')
 
+# 保險：新匯出的 KML 如果點數明顯變少，多半是只匯出了一個圖層
+BASE_KML = os.path.join(DATA, 'kml')
+if kml_new:
+    prev = 0
+    for f in glob.glob(os.path.join(BASE_KML, '*.kml')):
+        try:
+            prev += sum(1 for _ in ET.parse(f).getroot().iter(NS + 'Placemark'))
+        except Exception:
+            pass
+    now = sum(len(v) for v in pins.values())
+    if prev and now < prev * 0.8 and '--force' not in sys.argv:
+        say(f'  ! 新的 KML 只有 {now} 個點，上次有 {prev} 個，少了超過兩成。')
+        say('    My Maps 匯出時要選「整張地圖」而不是單一圖層。')
+        say('    已經停下來，沒有改動任何資料。確定要用的話在指令後面加 --force。')
+        sys.exit(2)
+
 # ---------- 4. 溫室 / 蘭房 ----------
 indoor = {}
 OSM = os.path.join(DATA, 'map.osm')
@@ -286,10 +302,14 @@ out, dropped = [], []
 for cn, g in groups.items():
     if cn in EXCL:
         dropped.append((cn, '名稱對照表 不收錄')); continue
-    fixes = [r['fix'] for r in g if r['fix']]
-    if '不收錄' in fixes:
+    # 標成「不收錄」的是那一列，不是整種花。同名的其他列還在就留著。
+    g = [r for r in g if r['fix'] != '不收錄']
+    if not g:
         dropped.append((cn, '主檔 不收錄')); continue
-    rep = next((r for r in g if r['n'] == cn), None) or max(g, key=lambda r: r['c'])
+    fixes = [r['fix'] for r in g if r['fix']]
+    # 代表列：同名的好幾列裡，用記錄數最多的那一列（它的區域最可信）
+    same = [r for r in g if r['n'] == cn] or g
+    rep = max(same, key=lambda r: (r['c'], r['last'] or ''))
     months, years, parts, nos, ind = set(), set(), set(), [], set()
     cnt, last = 0, ''
     for r in g:
@@ -325,6 +345,9 @@ for cn, g in groups.items():
                c=cnt, last=str(last), st=st,
                no=sorted(set(nos), key=key) if onmap else [],
                z=rep['zone'], p='、'.join(sorted(parts)), i='、'.join(sorted(ind)))
+    others = sorted({r['zone'] for r in g if r['zone'] and r['zone'] != rep['zone']})
+    if others:
+        rec['zz'] = others
     if note:
         rec['t'] = note
     out.append(rec)

@@ -70,7 +70,7 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
         <>
           <dt>區域</dt>
           <dd>
-            {s.z}{s.i && `，${s.i}內`}
+            {s.z}{s.i && `，${s.i}內`}{s.zz && <small class="also">另外在 {s.zz.join('、')} 也有</small>}
             {zoneUrl && <a class="gmap" href={zoneUrl} target="_blank" rel="noopener">在 Google 地圖看這一區 ↗</a>}
           </dd>
         </>
@@ -207,4 +207,5 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
 .yrs span.y{background:var(--ink);color:var(--paper)}
 .note{font-size:14px;color:var(--leaf);margin-top:14px}
 .gmap{display:inline-block;margin-left:10px;font-size:13.5px;white-space:nowrap}
+.also{display:block;color:var(--leaf);font-size:14px;margin-top:2px}
 </style>
