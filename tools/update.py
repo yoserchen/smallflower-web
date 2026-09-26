@@ -258,6 +258,7 @@ def metres(a, b):
 if loose:
     # 先從主檔讀出：代號 -> (中文名, 區域)，以及每一區慣用的代號前綴與目前最大號
     m_name, m_zone, zpre, pmax = {}, {}, {}, collections.Counter()
+    by_name = {}
     it0 = wb['物種主檔'].iter_rows(values_only=True)
     h0 = [str(x).strip() if x else '' for x in next(it0)]
     c0 = {k: i for i, k in enumerate(h0)}
@@ -270,6 +271,7 @@ if loose:
         z0 = str(r0[c0['區域']] or '').strip()
         z0 = ZONE_RENAME.get(z0, z0)
         m_name[cd] = nm0; m_zone[cd] = z0; all_names.add(canon(nm0))
+        by_name.setdefault(canon(nm0), []).append(cd)
         mm = re.match(r'(.+)-(\d+)$', cd)
         if mm:
             pre, num = mm.group(1), int(mm.group(2))
@@ -302,11 +304,19 @@ if loose:
             if r0['中文名'] == cn0 and \
                     metres((la, lo), (float(r0['緯度']), float(r0['經度']))) < 60:
                 hit = r0; break
+        z0 = zone_at(la, lo)
+        # 主檔有這個代號、但地圖上一直沒有點 —— 這一針就是補給它的
+        empty = [c for c in by_name.get(cn0, []) if c not in pins]
         if hit:
             hit['緯度'], hit['經度'] = f'{la:.7f}', f'{lo:.7f}'   # 記住新位置
             code = hit['內部代號']
+        elif empty:
+            code = next((c for c in empty if m_zone.get(c) == z0), empty[0])
+            remembered.append({'內部代號': code, '中文名': cn0,
+                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}'})
+            say(f'  沒編號的點「{cn0}」補上主檔既有的代號 {code}'
+                f'（{m_zone.get(code) or "沒寫區域"}）')
         else:
-            z0 = zone_at(la, lo)
             pre = (zpre.get(z0).most_common(1)[0][0] if zpre.get(z0) else '新')
             pmax[pre] += 1
             code = f'{pre}-{pmax[pre]:02d}'
@@ -562,6 +572,24 @@ if fresh:
     miss = [f2['中文名'] for f2 in fresh if f2['區域'] not in centres]
     if miss:
         say(f'　（{"、".join(miss)} 的區域沒有中心座標，要自己在 My Maps 加點）')
+
+# ---------- 6c. 主檔有、地圖上還沒有點的 ----------
+st_of = {x['n']: x['st'] for x in out}
+gap = [r for r in rows
+       if r['up'] and r['id'] not in pins and st_of.get(canon(r['n'])) == '現存']
+gf = os.path.join(IN, '地圖缺點.csv')
+if gap:
+    with open(gf, 'w', encoding='utf-8-sig', newline='') as fh:
+        w = csv.DictWriter(fh, fieldnames=['內部代號', '中文名', '區域', '最後拍到'])
+        w.writeheader()
+        for r in sorted(gap, key=lambda r: (r['zone'], r['id'])):
+            w.writerow({'內部代號': r['id'], '中文名': r['n'],
+                        '區域': r['zone'], '最後拍到': str(r['last'] or '')})
+    say()
+    say(f'主檔有、地圖上還沒有點的：{len(gap)} 株，清單寫到 {gf}')
+    say('　（在 My Maps 加一個點、名稱打花名就好，代號會自動接上）')
+elif os.path.exists(gf):
+    os.remove(gf)
 
 out.sort(key=lambda x: x['n'])
 
