@@ -217,8 +217,8 @@ for f in kmls:
             continue
         if m:
             pins[m.group(1)].append((la, lo))
-        elif nm:
-            loose.append((nm, la, lo))
+        elif nm and p.find('.//' + NS + 'Point') is not None:
+            loose.append((nm, la, lo))      # 線和面（步道、道路、區域範圍）不算
 say(f'　讀到 {sum(len(v) for v in pins.values())} 個點、{len(pins)} 個代號'
     + (f'，另外有 {len(loose)} 個沒編號的點' if loose else ''))
 

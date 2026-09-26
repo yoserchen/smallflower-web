@@ -31,18 +31,18 @@ const total = Object.keys(idx).length;
     <p>{cal.place}有一千多種花，可是走進去，多半只看得到一片綠。
       這份地圖把{AUTHOR}三年來拍到的每一株標在圖上，配一個編號——
       站在花前面想知道它叫什麼，翻地圖找編號就好，不必先認得它。</p>
-    <p>目前是 {cal.mapEdition}，分成四張，可以只帶當天要走的那一張：</p>
+    <p>地圖是最新版，分成四張，可以只帶當天要走的那一張：</p>
     <div class="sheets">
       {Object.entries(cal.sheets || {}).map(([k, v]) => (
         <div class="sh"><b>第 {k} 張</b><span>{v}</span><small>{cnt[k] || 0} 株</small></div>
       ))}
     </div>
-    <p class="note">地圖還在製作中。印好之後會在這裡公告，這一頁的編號查詢也會跟著對到新版。</p>
+    <p class="note">這份地圖目前印刷製作中。</p>
 
     <div class="get">
       <h2>想要一份</h2>
-      <p>印刷和寄送都是{AUTHOR}自己出的，所以第一批會先留給贊助 1000 元的朋友，
-        地圖出版時親送或寄送給您。</p>
+      <p>這份地圖不做販售，也不會在其他地方流通。印刷和寄送都是{AUTHOR}自己出的，
+        只留給贊助 1000 元的朋友，地圖出版時親送或寄送給您。</p>
       <a class="btn solid" href={SPONSOR_1000_URL} target="_blank" rel="noopener">我想要一份地圖</a>
       <p class="hint">也可以先看看<a href="/support/">其他支持方式</a>。</p>
     </div>
