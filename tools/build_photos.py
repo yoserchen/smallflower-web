@@ -247,7 +247,22 @@ print(f'評分完成，{done} 張，{time.time()-t0:.0f} 秒')
 
 # ---------- 3. 決定每種用哪 4 張 ----------
 picks_file = os.path.join(ROOT, 'tools/photo_picks.json')
-manual = json.load(open(picks_file, encoding='utf-8')) if os.path.exists(picks_file) else {}
+raw = json.load(open(picks_file, encoding='utf-8')) if os.path.exists(picks_file) else {}
+# 新版挑片工具匯出的是 {_v:2, picks:{}, bans:{}}；舊版是 {花名: [編號…]}
+if isinstance(raw, dict) and raw.get('_v') == 2:
+    manual = raw.get('picks') or {}
+    banned = {k: set(v) for k, v in (raw.get('bans') or {}).items() if v}
+else:
+    manual, banned = raw, {}
+if banned:
+    print(f'標成「不要用」的：{sum(len(v) for v in banned.values())} 張、{len(banned)} 種')
+    for nm, info in scored.items():
+        bad = banned.get(nm)
+        if bad:
+            info['all_raw'] = info['all']          # 挑片工具還是要看得到，才解除得掉
+            info['all'] = [r for r in info['all'] if r['k'] not in bad]
+            if not info['all']:
+                print(f'  ! {nm} 的照片全部標成不要用，網站上這種花會顯示「照片準備中」')
 
 # 舊版的手動指定是「第幾張」，照片一增減就會對到別張。這裡換算成固定編號，只做一次。
 if any(isinstance(v, list) and v and isinstance(v[0], int) for v in manual.values()):
@@ -343,10 +358,18 @@ size = sum(os.path.getsize(os.path.join(dp, f))
 print(f'網站圖完成：{len(meta_out)} 種、{nfiles} 個檔案、{size/1e6:.0f} MB、{time.time()-t0:.0f} 秒')
 
 # ---------- 5. 挑片工具索引 ----------
+def ph_row(nm, r):
+    o = {'k': r['k'], 'd': r['d'], 'a': r['a']}
+    if r['k'] in banned.get(nm, ()):
+        o['x'] = 1
+    return o
+
+
+# 挑片工具要看得到被排除的照片才能解除，所以這裡用未過濾的 all_raw
 pick_idx = {nm: {'s': v['s'],
-                 'n': len(v['all']),
-                 'ph': [{'k': r['k'], 'd': r['d'], 'a': r['a']} for r in v['all']]}
-            for nm, v in scored.items() if v['all']}
+                 'n': len(v.get('all_raw', v['all'])),
+                 'ph': [ph_row(nm, r) for r in v.get('all_raw', v['all'])]}
+            for nm, v in scored.items() if v.get('all_raw', v['all'])}
 current = {nm: [r['k'] for r in
                 ([x for k in manual[nm] for x in scored[nm]['all'] if x['k'] == k]
                  if nm in manual else auto_pick(scored[nm]['all']))]

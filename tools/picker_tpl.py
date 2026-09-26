@@ -49,6 +49,16 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
   align-items:center;justify-content:center}
 .cell[data-sel] .b{display:flex}
 .cell[data-sel="1"] .b::after{content:"大"}
+.cell .x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
+  background:rgba(0,0,0,.45);color:#fff;font-size:14px;line-height:24px;text-align:center;
+  opacity:0;transition:opacity .12s}
+.cell:hover .x,.cell:focus-within .x,.cell[data-x] .x{opacity:1}
+.cell .x:hover{background:var(--bloom)}
+.cell[data-x]{border-color:var(--mist);border-style:dashed;cursor:not-allowed}
+.cell[data-x] img{filter:grayscale(1);opacity:.3}
+.cell[data-x] .x{background:var(--bloom)}
+.cell[data-x] .dt::after{content:"　不使用"}
+@media (hover:none){.cell .x{opacity:1}}
 .cell .dt{position:absolute;left:0;right:0;bottom:0;font-size:11px;color:#fff;padding:12px 6px 4px;
   background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .hint{color:var(--leaf);font-size:13px;margin:16px 0 0;line-height:1.7}
@@ -76,6 +86,7 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
   <div class="acts">
     <button class="btn" id="auto">回到自動挑選</button>
     <button class="btn" id="clear">全部取消</button>
+    <button class="btn" id="unban">解除這種花的不使用</button>
     <button class="btn solid" id="exp">匯出 photo_picks.json</button>
     <button class="btn" id="prev">← 上一種</button>
     <button class="btn" id="next">下一種 →</button>
@@ -83,7 +94,9 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
   <div class="grid" id="g"></div>
   <p class="hint">
     點照片選取，再點一次取消。<b>第一張選的就是大圖</b>，其餘依點選順序排在下面，最多 4 張。<br />
-    左邊清單有紅點的是你調整過的。改完按「匯出」，把下載到的 photo_picks.json 給我，或自己放到
+    照片右上角的 <b>✕</b> 是「這張不要用」。標掉的照片會變灰，永遠不會被自動挑到，也不會上網站；
+    再點一次 ✕ 就解除。原始檔案不會被刪掉。<br />
+    左邊清單有紅點的是你調整過的。改完按「匯出」，把下載到的 photo_picks.json 放到
     smallflower-web/tools/ 底下再重跑一次程式。<br />
     進度會自動存在這台電腦的瀏覽器裡，關掉再開還在。
   </p>
@@ -92,9 +105,19 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
 <script>
 const DATA = __DATA__;
 const AUTO = DATA.current, SP = DATA.species;
-const KEY = 'huali-picks-v2';
+const KEY = 'huali-picks-v2', BKEY = 'huali-bans-v1';
 let picks = {};
 try { picks = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { picks = {}; }
+// 「不要用」的照片。第一次打開時，從上一次匯出後重建的索引帶進來。
+let bans = null;
+try { bans = JSON.parse(localStorage.getItem(BKEY)); } catch (e) { bans = null; }
+if (!bans || typeof bans !== 'object') {
+  bans = {};
+  for (const n in SP) {
+    const x = SP[n].ph.filter((p) => p.x).map((p) => p.k);
+    if (x.length) bans[n] = x;
+  }
+}
 // 舊版存的是「第幾張」，跟現在的固定編號不相容，一律丟掉
 for (var _n in picks) {
   if (!Array.isArray(picks[_n]) || picks[_n].some(function (x) { return typeof x !== 'string'; })) delete picks[_n];
@@ -104,8 +127,14 @@ const names = Object.keys(SP).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
 let cur = names[0], mode = 'all', q = '';
 
 const $ = (id) => document.getElementById(id);
-const sel = (n) => picks[n] || AUTO[n] || [];
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) {} };
+const ban = (n) => bans[n] || [];
+const sel = (n) => (picks[n] || AUTO[n] || []).filter((k) => ban(n).indexOf(k) < 0);
+const save = () => {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(picks));
+    localStorage.setItem(BKEY, JSON.stringify(bans));
+  } catch (e) {}
+};
 
 function shown() {
   return names.filter((n) => {
@@ -121,7 +150,7 @@ function drawList() {
     const b = document.createElement('button');
     b.innerHTML = '<span class="dot"></span><span class="nm"></span><span class="ct">' + SP[n].n + '</span>';
     b.querySelector('.nm').textContent = n;
-    if (picks[n]) b.classList.add('edited');
+    if (picks[n] || (bans[n] && bans[n].length)) b.classList.add('edited');
     if (n === cur) b.setAttribute('aria-current', 'true');
     b.onclick = () => { cur = n; drawList(); drawMain(); };
     f.appendChild(b);
@@ -134,22 +163,39 @@ function drawList() {
 function drawMain() {
   const sp = SP[cur], s = sel(cur);
   $('nm').textContent = cur;
-  $('mt').textContent = sp.n + ' 張照片　已選 ' + s.length + ' 張' + (picks[cur] ? '（手動）' : '（自動）');
+  const nb = ban(cur).length;
+  $('mt').textContent = sp.n + ' 張照片　已選 ' + s.length + ' 張'
+    + (picks[cur] ? '（手動）' : '（自動）') + (nb ? '　不使用 ' + nb + ' 張' : '');
   const f = document.createDocumentFragment();
   for (const p of sp.ph) {
     const c = document.createElement('button');
     c.className = 'cell';
-    const i = s.indexOf(p.k);
+    const i = s.indexOf(p.k), xd = ban(cur).indexOf(p.k) >= 0;
     if (i >= 0) c.dataset.sel = i + 1;
+    if (xd) c.dataset.x = '1';
     c.innerHTML = '<img loading="lazy" decoding="async" src="thumbs/' + sp.s + '/' + p.k +
       '.jpg" alt="" /><span class="b">' + (i >= 0 && i > 0 ? i + 1 : '') +
+      '</span><span class="x" role="button" title="這張不要用">' + (xd ? '↩' : '✕') +
       '</span><span class="dt">' + (p.d || '') + '</span>';
     c.onclick = () => toggle(p.k);
+    c.querySelector('.x').onclick = (e) => { e.stopPropagation(); toggleBan(p.k); };
     f.appendChild(c);
   }
   $('g').replaceChildren(f);
 }
+function toggleBan(k) {
+  const b = ban(cur).slice(), i = b.indexOf(k);
+  if (i >= 0) b.splice(i, 1);
+  else {
+    b.push(k);
+    const s = sel(cur);                        // 標成不要用就從選取名單裡拿掉
+    if (s.indexOf(k) >= 0) picks[cur] = s.filter((x) => x !== k);
+  }
+  if (b.length) bans[cur] = b; else delete bans[cur];
+  save(); drawList(); drawMain();
+}
 function toggle(k) {
+  if (ban(cur).indexOf(k) >= 0) return;      // 標成不要用的不能選
   const s = sel(cur).slice(), i = s.indexOf(k);
   if (i >= 0) s.splice(i, 1);
   else { if (s.length >= 4) return; s.push(k); }
@@ -157,6 +203,7 @@ function toggle(k) {
 }
 $('auto').onclick = () => { delete picks[cur]; save(); drawList(); drawMain(); };
 $('clear').onclick = () => { picks[cur] = []; save(); drawList(); drawMain(); };
+$('unban').onclick = () => { delete bans[cur]; save(); drawList(); drawMain(); };
 const step = (d) => {
   const l = shown(), i = l.indexOf(cur);
   if (i < 0) return;
@@ -166,8 +213,10 @@ const step = (d) => {
 $('next').onclick = () => step(1);
 $('prev').onclick = () => step(-1);
 $('exp').onclick = () => {
-  const out = {};
-  for (const n in picks) if (picks[n] && picks[n].length) out[n] = picks[n];
+  const pk = {}, bn = {};
+  for (const n in picks) if (picks[n] && picks[n].length) pk[n] = picks[n];
+  for (const n in bans) if (bans[n] && bans[n].length) bn[n] = bans[n];
+  const out = { _v: 2, picks: pk, bans: bn };
   const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
