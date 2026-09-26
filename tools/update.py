@@ -198,6 +198,7 @@ say(f'地圖 KML：{len(kmls)} 個檔' + ('　（新的）' if kml_new else '　
 
 NS = '{http://www.opengis.net/kml/2.2}'
 pins = collections.defaultdict(list)       # 內部代號 -> [(lat, lon)]
+loose = []                                 # 沒有編號的圖釘 [(名稱, lat, lon)]
 for f in kmls:
     try:
         root = ET.parse(f).getroot()
@@ -207,14 +208,19 @@ for f in kmls:
         nm = (p.findtext(NS + 'name') or '').strip()
         m = re.match(r'(\S+?-\d+)', nm)
         c = p.find('.//' + NS + 'coordinates')
-        if not m or c is None or not c.text:
+        if c is None or not c.text:
             continue
         try:
             lo, la = c.text.strip().split(',')[:2]
-            pins[m.group(1)].append((float(la), float(lo)))
+            la, lo = float(la), float(lo)
         except Exception:
-            pass
-say(f'　讀到 {sum(len(v) for v in pins.values())} 個點、{len(pins)} 個代號')
+            continue
+        if m:
+            pins[m.group(1)].append((la, lo))
+        elif nm:
+            loose.append((nm, la, lo))
+say(f'　讀到 {sum(len(v) for v in pins.values())} 個點、{len(pins)} 個代號'
+    + (f'，另外有 {len(loose)} 個沒編號的點' if loose else ''))
 
 # 保險：新匯出的 KML 如果點數明顯變少，多半是只匯出了一個圖層
 BASE_KML = os.path.join(DATA, 'kml')
@@ -231,6 +237,90 @@ if kml_new:
         say('    My Maps 匯出時要選「整張地圖」而不是單一圖層。')
         say('    已經停下來，沒有改動任何資料。確定要用的話在指令後面加 --force。')
         sys.exit(2)
+
+# ---------- 3b. 沒有編號的圖釘：同一種花的另一個位置 ----------
+# 在 My Maps 直接加一個點、名稱打花名就好，這裡會自動配一個內部代號，
+# 並且把代號記在 tools/data/圖釘編號.csv，之後每次都認得同一個點。
+PIN_CSV = os.path.join(DATA, '圖釘編號.csv')
+PIN_COLS = ['內部代號', '中文名', '緯度', '經度']
+remembered = list(csv.DictReader(open(PIN_CSV, encoding='utf-8-sig'))) \
+    if os.path.exists(PIN_CSV) else []
+extra_rows = []
+
+
+def metres(a, b):
+    import math
+    dy = (a[0] - b[0]) * 111320
+    dx = (a[1] - b[1]) * 111320 * math.cos(math.radians(a[0]))
+    return (dx * dx + dy * dy) ** .5
+
+
+if loose:
+    # 先從主檔讀出：代號 -> (中文名, 區域)，以及每一區慣用的代號前綴與目前最大號
+    m_name, m_zone, zpre, pmax = {}, {}, {}, collections.Counter()
+    it0 = wb['物種主檔'].iter_rows(values_only=True)
+    h0 = [str(x).strip() if x else '' for x in next(it0)]
+    c0 = {k: i for i, k in enumerate(h0)}
+    all_names = set()
+    for r0 in it0:
+        if not r0 or not r0[c0['內部代號']]:
+            continue
+        cd = str(r0[c0['內部代號']]).strip()
+        nm0 = str(r0[c0['中文名']] or '').strip()
+        z0 = str(r0[c0['區域']] or '').strip()
+        z0 = ZONE_RENAME.get(z0, z0)
+        m_name[cd] = nm0; m_zone[cd] = z0; all_names.add(canon(nm0))
+        mm = re.match(r'(.+)-(\d+)$', cd)
+        if mm:
+            pre, num = mm.group(1), int(mm.group(2))
+            pmax[pre] = max(pmax[pre], num)
+            if z0:
+                zpre.setdefault(z0, collections.Counter())[pre] += 1
+    # 已經配過號的也要算進最大號，免得撞號
+    for r0 in remembered:
+        mm = re.match(r'(.+)-(\d+)$', r0['內部代號'])
+        if mm:
+            pmax[mm.group(1)] = max(pmax[mm.group(1)], int(mm.group(2)))
+
+    ref = [(la, lo, m_zone[cd]) for cd, qs in pins.items() if m_zone.get(cd)
+           for la, lo in qs]
+
+    def zone_at(la, lo, k=9):
+        if not ref:
+            return ''
+        near = sorted(ref, key=lambda r: metres((la, lo), (r[0], r[1])))[:k]
+        return collections.Counter(r[2] for r in near).most_common(1)[0][0]
+
+    say()
+    for nm0, la, lo in loose:
+        cn0 = canon(re.sub(r'^[\W_]+', '', nm0).strip())
+        if cn0 not in all_names:
+            say(f'  ! 沒編號的點「{nm0}」對不到主檔裡的花名，先跳過')
+            continue
+        hit = None
+        for r0 in remembered:
+            if r0['中文名'] == cn0 and \
+                    metres((la, lo), (float(r0['緯度']), float(r0['經度']))) < 60:
+                hit = r0; break
+        if hit:
+            hit['緯度'], hit['經度'] = f'{la:.7f}', f'{lo:.7f}'   # 記住新位置
+            code = hit['內部代號']
+        else:
+            z0 = zone_at(la, lo)
+            pre = (zpre.get(z0).most_common(1)[0][0] if zpre.get(z0) else '新')
+            pmax[pre] += 1
+            code = f'{pre}-{pmax[pre]:02d}'
+            remembered.append({'內部代號': code, '中文名': cn0,
+                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}'})
+            extra_rows.append({'內部代號': code, '中文名': cn0, '區域': z0,
+                               '備註': '同一種花的另一個位置；月份與記錄數留空'})
+            say(f'  沒編號的點「{cn0}」配到新代號 {code}（{z0 or "區域判斷不出來"}）')
+        pins[code].append((la, lo))
+    with open(PIN_CSV, 'w', encoding='utf-8-sig', newline='') as fh:
+        w = csv.DictWriter(fh, fieldnames=PIN_COLS); w.writeheader(); w.writerows(remembered)
+    if extra_rows:
+        say(f'　這 {len(extra_rows)} 個代號等一下會寫進「新增物種_待貼到主檔.csv」')
+    say(f'　圖釘編號表：{len(remembered)} 筆（{PIN_CSV}）')
 
 # ---------- 4. 溫室 / 蘭房 ----------
 indoor = {}
@@ -318,8 +408,10 @@ for r in it:
                      mfix=str(g(r, '月份修正')).strip(), last=g(r, '最後拍到'),
                      years=g(r, '拍到年份'), c=g(r, '記錄數', 0) or 0,
                      zone=ZONE_RENAME.get(z, z), parts=g(r, '記錄部位'),
+                     up=str(g(r, '上地圖')).strip() != '否',
                      note=str(g(r, NOTE_COL)).strip() if NOTE_COL else ''))
-say(f'主檔 {len(rows)} 列')
+n_off = sum(1 for r in rows if not r['up'])
+say(f'主檔 {len(rows)} 列' + (f'，其中 {n_off} 列「上地圖」是否，不給地圖編號' if n_off else ''))
 
 groups = collections.defaultdict(list)
 for r in rows:
@@ -346,7 +438,8 @@ for cn, g in groups.items():
         cnt += r['c']; last = max(last, r['last'] or '')
         if r['parts']:
             parts |= set(str(r['parts']).split('、'))
-        nos += pnum.get(r['id'], [])
+        if r['up']:
+            nos += pnum.get(r['id'], [])
         ind |= indoor.get(r['id'], set())
         if r['id'] in pins:
             pass
@@ -391,6 +484,11 @@ for r in rows:
     if r['zone']:
         zone_prefix.setdefault(r['zone'], collections.Counter())[pre] += 1
 
+for r0 in remembered:                      # 3b 已經配掉的號不要再用
+    mm = re.match(r'(.+)-(\d+)$', r0['內部代號'])
+    if mm:
+        prefix_max[mm.group(1)] = max(prefix_max[mm.group(1)], int(mm.group(2)))
+
 have = {x['n'] for x in out}
 fresh = []
 for cn, o in sorted(obs.items()):
@@ -412,20 +510,29 @@ for cn, o in sorted(obs.items()):
                   '_月份': ','.join(str(x) for x in sorted(o['months'])) or '（還沒拍到花）'})
     have.add(cn)
 
-if fresh:
+if fresh or extra_rows:
     say()
+if fresh:
     say(f'觀測記錄帶出 {len(fresh)} 種主檔還沒有的花：')
     for f2 in fresh:
         mm = f2['_月份']
         say(f"　{f2['內部代號']}　{f2['中文名']}　{f2['區域']}　" + (mm if mm.startswith('（') else mm + ' 月'))
+
+if fresh or extra_rows:
     nf = os.path.join(IN, '新增物種_待貼到主檔.csv')
     with open(nf, 'w', encoding='utf-8-sig', newline='') as fh:
         w = csv.DictWriter(fh, fieldnames=['內部代號', '中文名', '區域', '備註'],
                            extrasaction='ignore')
-        w.writeheader(); w.writerows(fresh)
-    say(f'清單寫到 {nf}，可以貼進 Google 試算表的物種主檔')
+        w.writeheader(); w.writerows(fresh + extra_rows)
+    say(f'清單寫到 {nf}（{len(fresh)} 種新的花、{len(extra_rows)} 個新位置），'
+        '可以貼進 Google 試算表的物種主檔')
     say('　（只貼代號、中文名、區域三欄，月份和記錄數留空，那兩欄會自動算）')
+else:
+    old_nf = os.path.join(IN, '新增物種_待貼到主檔.csv')
+    if os.path.exists(old_nf):
+        os.remove(old_nf)          # 上次的已經貼過了，刪掉免得又貼一次
 
+if fresh:
     # 待定位 KML：先放在該區中心，匯入 My Maps 之後把點拖到正確位置
     zf = os.path.join(ROOT, 'src/zones', SLUG + '.json')
     centres = json.load(open(zf, encoding='utf-8')) if os.path.exists(zf) else {}

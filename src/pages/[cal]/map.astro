@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { LIVE_CALENDARS, speciesOf } from '../../lib.mjs';
+import { SPONSOR_1000_URL, AUTHOR } from '../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.filter((c) => c.hasMap).map((c) => ({ params: { cal: c.slug }, props: { cal: c } }));
 }
@@ -9,19 +10,41 @@ const idx = {};
 speciesOf(cal.slug).forEach((s) => s.no.forEach((n) => { idx[n] = [s.id, s.n]; }));
 const cnt = {};
 Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] || 0) + 1; });
+const total = Object.keys(idx).length;
 ---
-<Base title="用地圖編號查花" cal={cal} current="map" description={`輸入${cal.place}口袋地圖上的編號，查看那一株是什麼花。`}>
+<Base title={`${cal.place}口袋地圖`} cal={cal} current="map"
+      description={`${cal.place}口袋地圖：把每一株花標在紙上，配一個編號。手上有地圖的話，在這裡輸入編號就能查到那是什麼花。`}>
   <section>
-    <h1>用地圖編號查花</h1>
-    <p class="sub">輸入口袋地圖上的編號，例如 4-157，就會跳到那種花。前面的數字是第幾張，後面是號碼。目前對應{cal.mapEdition}。</p>
-    <form id="f" class="search" onsubmit="return false">
-      <input id="n" inputmode="numeric" placeholder="例如 4-157" aria-label="地圖編號" autocomplete="off" />
-    </form>
-    <p id="r" class="hint" aria-live="polite"></p>
+    <h1>{cal.place}口袋地圖</h1>
+    <p class="sub">一張帶得出門的紙。{total} 株花標在圖上，每一株一個編號。
+      在現場看到編號，回到這一頁一查，就知道那是什麼花、什麼時候開。</p>
+
+    <div class="lookup">
+      <h2>手上有地圖，要查編號</h2>
+      <form id="f" class="search" onsubmit="return false">
+        <input id="n" inputmode="numeric" placeholder="例如 4-157" aria-label="地圖編號" autocomplete="off" />
+      </form>
+      <p id="r" class="hint" aria-live="polite">輸入地圖上的編號。前面的數字是第幾張，後面是號碼。</p>
+    </div>
+
+    <h2>還沒有地圖</h2>
+    <p>{cal.place}有一千多種花，可是走進去，多半只看得到一片綠。
+      這份地圖把{AUTHOR}三年來拍到的每一株標在圖上，配一個編號——
+      站在花前面想知道它叫什麼，翻地圖找編號就好，不必先認得它。</p>
+    <p>目前是 {cal.mapEdition}，分成四張，可以只帶當天要走的那一張：</p>
     <div class="sheets">
       {Object.entries(cal.sheets || {}).map(([k, v]) => (
         <div class="sh"><b>第 {k} 張</b><span>{v}</span><small>{cnt[k] || 0} 株</small></div>
       ))}
+    </div>
+    <p class="note">地圖還在製作中。印好之後會在這裡公告，這一頁的編號查詢也會跟著對到新版。</p>
+
+    <div class="get">
+      <h2>想要一份</h2>
+      <p>印刷和寄送都是{AUTHOR}自己出的，所以第一批會先留給贊助 1000 元的朋友，
+        地圖出版時親送或寄送給您。</p>
+      <a class="btn solid" href={SPONSOR_1000_URL} target="_blank" rel="noopener">我想要一份地圖</a>
+      <p class="hint">也可以先看看<a href="/support/">其他支持方式</a>。</p>
     </div>
   </section>
   <script type="application/json" id="idx" set:html={JSON.stringify(idx)}></script>
@@ -31,6 +54,7 @@ Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] ||
     var I = JSON.parse(document.getElementById('idx').textContent);
     var SLUG = JSON.parse(document.getElementById('cfg').textContent).slug;
     var n = document.getElementById('n'), r = document.getElementById('r');
+    var TIP = r.textContent;
     function norm(v) {
       v = v.replace(/[－—–\s]/g, '-').replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); });
       var m = v.match(/^(\d)\D*(\d{1,3})$/);
@@ -38,7 +62,7 @@ Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] ||
     }
     function go() {
       var k = norm(n.value.trim());
-      if (!k) { r.textContent = ''; return; }
+      if (!k) { r.textContent = TIP; return; }
       var h = I[k];
       if (h) r.innerHTML = '<a href="/' + SLUG + '/flower/' + encodeURIComponent(h[0]) + '/">' + k + '　' + h[1] + '</a>';
       else r.textContent = '找不到 ' + k + '，請確認張號和號碼。';
@@ -54,9 +78,16 @@ Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] ||
   </script>
 </Base>
 <style>
-.sheets{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:28px}
-.sh{padding:16px;border:1px solid var(--mist);border-radius:14px;background:var(--panel);display:grid}
-.sh b{font-family:var(--serif);font-size:20px}
+h2{font-family:var(--serif);font-size:22px;margin:34px 0 10px}
+.lookup{border:1px solid var(--mist);border-radius:16px;padding:18px 20px 6px;background:var(--panel);
+  margin:22px 0 0}
+.lookup h2{margin:0 0 10px;font-size:19px}
+.sheets{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:14px}
+.sh{padding:14px 0;display:grid;gap:2px;border-top:1px solid var(--mist)}
+.sh b{font-family:var(--serif);font-size:19px;font-weight:700}
 .sh small{color:var(--leaf)}
-#r a{font-size:18px;font-weight:700}
+.note{color:var(--leaf);font-size:14px;margin-top:18px}
+.get{margin-top:36px;border-top:1px solid var(--mist);padding-top:6px}
+.get .btn{display:inline-block;text-decoration:none;margin-top:4px}
+.get .hint{margin-top:12px}
 </style>
