@@ -193,7 +193,26 @@ json.dump({n: canon(n) for n, r in rules.items() if r['處理方式'] == '合併
           open(os.path.join(ROOT, 'tools/aliases.json'), 'w'), ensure_ascii=False, indent=0)
 
 # ---------- 3. 地圖 KML ----------
-kmls, kml_new = newest(os.path.join(IN, '地圖/*.kml'), os.path.join(DATA, 'kml'), '*.kml')
+kmls, kml_new = newest(os.path.join(IN, '地圖/*.km[lz]'), os.path.join(DATA, 'kml'), '*.kml')
+# My Maps 預設下載的是 .kmz（壓縮過的 kml），這裡自動解開
+if any(f.lower().endswith('.kmz') for f in kmls):
+    import zipfile, tempfile
+    tmp = tempfile.mkdtemp()
+    out = []
+    for f in kmls:
+        if not f.lower().endswith('.kmz'):
+            out.append(f); continue
+        try:
+            z = zipfile.ZipFile(f)
+            inner = next(i for i in z.namelist() if i.lower().endswith('.kml'))
+            dst = os.path.join(tmp, os.path.splitext(os.path.basename(f))[0] + '.kml')
+            with open(dst, 'wb') as fh:
+                fh.write(z.read(inner))
+            out.append(dst)
+            say(f'　解開 {os.path.basename(f)}（kmz）')
+        except Exception as e:
+            say(f'  ! 解不開 {os.path.basename(f)}：{e}')
+    kmls = out
 say(f'地圖 KML：{len(kmls)} 個檔' + ('　（新的）' if kml_new else '　（沿用上次）'))
 
 NS = '{http://www.opengis.net/kml/2.2}'
@@ -499,10 +518,12 @@ for r0 in remembered:                      # 3b 已經配掉的號不要再用
     if mm:
         prefix_max[mm.group(1)] = max(prefix_max[mm.group(1)], int(mm.group(2)))
 
+# 主檔標了「不收錄」而被拿掉的花，不要又從觀測記錄裡冒出來
+gone_excl = {cn for cn, why in dropped if '不收錄' in why}
 have = {x['n'] for x in out}
 fresh = []
 for cn, o in sorted(obs.items()):
-    if cn in have or cn in EXCL:
+    if cn in have or cn in EXCL or cn in gone_excl:
         continue
     z = o['zone']
     pre = (zone_prefix.get(z).most_common(1)[0][0] if zone_prefix.get(z) else '新')
