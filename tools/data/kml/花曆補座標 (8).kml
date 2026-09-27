@@ -5815,6 +5815,15 @@
           </coordinates>
         </Point>
       </Placemark>
+      <Placemark>
+        <name>朴樹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5109935,25.0316579,0
+          </coordinates>
+        </Point>
+      </Placemark>
     </Folder>
     <Folder>
       <name>第1張 方舟溫室（402 點）</name>
@@ -6264,7 +6273,7 @@
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
-            121.509253,25.032866,0
+            121.5111466,25.0324043,0
           </coordinates>
         </Point>
       </Placemark>
@@ -8379,7 +8388,7 @@
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
-            121.509331,25.032894,0
+            121.5092707,25.0330204,0
           </coordinates>
         </Point>
       </Placemark>
@@ -9460,6 +9469,15 @@
         <Point>
           <coordinates>
             121.5097784,25.0327722,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>拐棗</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5095626,25.0330492,0
           </coordinates>
         </Point>
       </Placemark>
@@ -12652,6 +12670,78 @@
           </coordinates>
         </Point>
       </Placemark>
+      <Placemark>
+        <name>台灣糯米條</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5094794,25.0316907,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>杜鵑花</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5110914,25.0324404,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>麵包樹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5086265,25.0328281,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>石斑木</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5101325,25.0326349,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>魯花樹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5103069,25.0320322,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>樹蘭</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5084857,25.0325194,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>黑星紫金牛</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5100521,25.0327661,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>矮仙丹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5102573,25.0329119,0
+          </coordinates>
+        </Point>
+      </Placemark>
     </Folder>
     <Folder>
       <name>第2張 西北（300 點）</name>
@@ -14595,7 +14685,7 @@
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
-            121.508913,25.032777,0
+            121.5088982,25.0327491,0
           </coordinates>
         </Point>
       </Placemark>
@@ -15442,6 +15532,24 @@
         <Point>
           <coordinates>
             121.5089483,25.0322837,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>厚皮香</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5090275,25.0321002,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>笑靨花</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5097275,25.0326616,0
           </coordinates>
         </Point>
       </Placemark>
@@ -17199,7 +17307,7 @@
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
-            121.50947,25.031388,0
+            121.5096323,25.0314305,0
           </coordinates>
         </Point>
       </Placemark>
@@ -18558,7 +18666,7 @@
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
-            121.51046,25.032198,0
+            121.5081157,25.0314859,0
           </coordinates>
         </Point>
       </Placemark>
@@ -19315,6 +19423,132 @@
         <Point>
           <coordinates>
             121.5093131,25.0316287,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>小葉魚藤</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5089162,25.0312703,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>橢圓葉月桃</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5091589,25.0313772,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>羊蹄甲</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5096605,25.0321597,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>羊蹄甲</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.511542,25.0323031,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>龍吐珠</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5088665,25.032387,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>台灣馬兜鈴</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5098254,25.0327394,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>麵包樹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5103766,25.0317332,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>馬纓丹</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.508149,25.0315935,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>紅花檵木</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5089644,25.0316846,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>石碇佛甲草</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5088343,25.0319143,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>蘭嶼野茉莉</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5079827,25.0327406,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>白仙丹花</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5085259,25.0324732,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>都蘭山金石榴</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5098844,25.0327843,0
+          </coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>鶴頂蘭</name>
+        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
+        <Point>
+          <coordinates>
+            121.5095264,25.0327187,0
           </coordinates>
         </Point>
       </Placemark>
