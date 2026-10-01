@@ -16,10 +16,11 @@ a{color:var(--bloom)}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--paper);border-bottom:1px solid var(--mist)}
 header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
-.brand{font-family:var(--serif);font-weight:700;font-size:18px;color:var(--ink);text-decoration:none;white-space:nowrap}
+.brand{font-family:var(--serif);font-weight:700;font-size:18px;color:var(--ink);text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.brand img{width:30px;height:30px;display:block;flex:none}
 nav a{color:var(--ink);text-decoration:none;margin-left:18px;font-size:15px}
 nav a:hover,nav a[aria-current="page"]{color:var(--bloom)}
-@media (max-width:560px){nav a{margin-left:12px;font-size:14px}.brand{font-size:16px}}
+@media (max-width:560px){nav a{margin-left:12px;font-size:14px}.brand{font-size:16px;gap:7px}.brand img{width:25px;height:25px}}
 h1{font-family:var(--serif);font-weight:900;font-size:clamp(32px,6vw,52px);line-height:1.15;margin:0 0 12px;letter-spacing:.02em}
 h2{font-family:var(--serif);font-weight:700;font-size:26px;margin:0 0 6px}
 .lead{font-size:17px;max-width:32em;margin:0 0 20px}

@@ -261,7 +261,7 @@ if kml_new:
 # 在 My Maps 直接加一個點、名稱打花名就好，這裡會自動配一個內部代號，
 # 並且把代號記在 tools/data/圖釘編號.csv，之後每次都認得同一個點。
 PIN_CSV = os.path.join(DATA, '圖釘編號.csv')
-PIN_COLS = ['內部代號', '中文名', '緯度', '經度']
+PIN_COLS = ['內部代號', '中文名', '緯度', '經度', '區域', '備註']
 remembered = list(csv.DictReader(open(PIN_CSV, encoding='utf-8-sig'))) \
     if os.path.exists(PIN_CSV) else []
 extra_rows = []
@@ -315,9 +315,7 @@ if loose:
     say()
     for nm0, la, lo in loose:
         cn0 = canon(re.sub(r'^[\W_]+', '', nm0).strip())
-        if cn0 not in all_names:
-            say(f'  ! 沒編號的點「{nm0}」對不到主檔裡的花名，先跳過')
-            continue
+        brand_new = cn0 not in all_names      # 主檔連這個花名都還沒有
         hit = None
         for r0 in remembered:
             if r0['中文名'] == cn0 and \
@@ -325,30 +323,37 @@ if loose:
                 hit = r0; break
         z0 = zone_at(la, lo)
         # 主檔有這個代號、但地圖上一直沒有點 —— 這一針就是補給它的
-        empty = [c for c in by_name.get(cn0, []) if c not in pins]
+        empty = [] if brand_new else [c for c in by_name.get(cn0, []) if c not in pins]
         if hit:
             hit['緯度'], hit['經度'] = f'{la:.7f}', f'{lo:.7f}'   # 記住新位置
             code = hit['內部代號']
         elif empty:
             code = next((c for c in empty if m_zone.get(c) == z0), empty[0])
-            remembered.append({'內部代號': code, '中文名': cn0,
-                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}'})
+            remembered.append({'內部代號': code, '中文名': cn0, '區域': m_zone.get(code, z0),
+                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}', '備註': ''})
             say(f'  沒編號的點「{cn0}」補上主檔既有的代號 {code}'
                 f'（{m_zone.get(code) or "沒寫區域"}）')
         else:
             pre = (zpre.get(z0).most_common(1)[0][0] if zpre.get(z0) else '新')
             pmax[pre] += 1
             code = f'{pre}-{pmax[pre]:02d}'
-            remembered.append({'內部代號': code, '中文名': cn0,
-                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}'})
-            extra_rows.append({'內部代號': code, '中文名': cn0, '區域': z0,
-                               '備註': '同一種花的另一個位置；月份與記錄數留空'})
-            say(f'  沒編號的點「{cn0}」配到新代號 {code}（{z0 or "區域判斷不出來"}）')
+            note = ('地圖上新加的花，主檔還沒有這一種；月份與記錄數留空'
+                    if brand_new else '同一種花的另一個位置；月份與記錄數留空')
+            remembered.append({'內部代號': code, '中文名': cn0, '區域': z0,
+                               '緯度': f'{la:.7f}', '經度': f'{lo:.7f}', '備註': note})
+            say(f'  沒編號的點「{cn0}」配到新代號 {code}（{z0 or "區域判斷不出來"}）'
+                + ('　← 主檔還沒有這一種花' if brand_new else ''))
         pins[code].append((la, lo))
     with open(PIN_CSV, 'w', encoding='utf-8-sig', newline='') as fh:
-        w = csv.DictWriter(fh, fieldnames=PIN_COLS); w.writeheader(); w.writerows(remembered)
+        w = csv.DictWriter(fh, fieldnames=PIN_COLS, extrasaction='ignore')
+        w.writeheader(); w.writerows(remembered)
+    # 待貼清單每次重算：主檔還沒有這個代號的，就一直列著，直到貼進去為止
+    extra_rows = [{'內部代號': r['內部代號'], '中文名': r['中文名'],
+                   '區域': r.get('區域') or '',
+                   '備註': r.get('備註') or '地圖上的點，主檔還沒有這一列'}
+                  for r in remembered if r['內部代號'] not in m_name]
     if extra_rows:
-        say(f'　這 {len(extra_rows)} 個代號等一下會寫進「新增物種_待貼到主檔.csv」')
+        say(f'　主檔還沒有的代號 {len(extra_rows)} 個，會寫進「新增物種_待貼到主檔.csv」')
     say(f'　圖釘編號表：{len(remembered)} 筆（{PIN_CSV}）')
 
 # ---------- 4. 溫室 / 蘭房 ----------
