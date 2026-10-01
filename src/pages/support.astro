@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { SPONSOR_500_URL, SPONSOR_1000_URL, AUTHOR } from '../config.mjs';
 const tiers = [
-  { amt: 500, text: '支持小花老師繼續記錄與分享更多花的資訊。', href: SPONSOR_500_URL },
+  { amt: 500, text: '支持小花老師，讓他能夠有更多資源繼續花曆的記錄，分享花的資訊。', href: SPONSOR_500_URL },
   { amt: 1000, text: '支持小花老師之外，還可以在口袋地圖出版時優先保留一份，親送或寄送給您。', href: SPONSOR_1000_URL, main: true },
 ];
 ---
@@ -27,10 +27,11 @@ const tiers = [
 <style>
 .tiers{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px}
 @media (max-width:640px){.tiers{grid-template-columns:1fr}}
-.tier{border:1px solid var(--mist);border-radius:16px;padding:22px;background:var(--panel)}
+.tier{border:1px solid var(--mist);border-radius:16px;padding:22px;background:var(--panel);
+  display:flex;flex-direction:column}
 .tier.main{border-color:var(--bloom)}
 .amt{font-family:var(--serif);font-weight:900;font-size:36px;line-height:1}
 .amt small{font-size:16px;font-weight:500;margin-left:4px}
-.tier p{margin:12px 0 18px;font-size:15px}
+.tier p{margin:12px 0 18px;font-size:15px;flex:1}
 .tier .btn{display:block;text-align:center}
 </style>
