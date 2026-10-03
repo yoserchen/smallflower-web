@@ -28,7 +28,7 @@ OUT = os.path.expanduser('~/Documents/花曆地圖')
 SITE = 'smallflower.tw'
 MAPURL = f'https://{SITE}/tpbg/map/'
 NS = '{http://www.opengis.net/kml/2.2}'
-VER = 'v8'
+VER = '2026 年 10 月　V1.0 版'
 SHEET_NAME = {1: '方舟溫室', 2: '西北', 3: '東側', 4: '南側'}
 TAG = {'蘭房': '蘭', '溫室': '溫', '多肉溫室': '多'}
 UI_TEXT = (
@@ -37,7 +37,7 @@ UI_TEXT = (
     '地圖上的數字對照背面索引，號碼由北往南排列。'
     '放大圖內的號碼請看放大圖。室內（）的不畫點，背面索引裡號碼後面有「」的就是。'
     '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。'
-    '溫室蘭房多肉內外'
+    '溫室蘭房多肉內外花卉位置非絕對精準定位，僅供參考。年月版'
 )
 
 MIN_INDOOR = 20                # 室內範圍裡少於這麼多株，就照常畫點，不用號碼範圍帶過
@@ -783,14 +783,15 @@ def draw_map(c, sheet, base, greens, F, qr):
             ('放大圖內的號碼請看放大圖。室內（' + '、'.join(sheet['shapes']) + '）的不畫點，'
              '背面索引裡號碼後面有「' + '」「'.join(TAG[k] for k in sheet['shapes']) + '」的就是。'
              if sheet.get('shapes') else '放大圖內的號碼請看放大圖。'),
-            '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。']):
+            '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。',
+            '花卉位置非絕對精準定位，僅供參考。']):
         c.drawString(*P(dx, top + 4.2 + i * 5.2), t)
     q = 16.0
     if qr:
         c.drawImage(qr, *P(PW - M - q, top + q), q * MM, q * MM, mask='auto')
         c.setFont(F['body'], 5.2); c.setFillColorRGB(*LEAF)
         c.drawCentredString(*P(PW - M - q / 2, top + q + 3.6), '用編號查花')
-    c.setFillColorRGB(*BLOOM); c.setFont(F['body'], 6)
+    c.setFillColorRGB(*BLOOM); c.setFont(F['body'], 7)
     c.drawRightString(*P(PW - M - q - 6, top + 16), VER)
     c.showPage()
 
@@ -866,12 +867,21 @@ def main():
     prj = Proj(pts)
     fresh, gone, rect = assign(pts, prj)
     base = base_from_kml(kroot, prj)
+    # 他如果把 My Maps 的「室內範圍」圖層刪掉了，就用上次存下來的那一份
+    if not base.get('indoor'):
+        bk = os.path.join(DATA, '室內範圍.kml')
+        if os.path.exists(bk):
+            keep_in = base_from_kml(kml_root(bk), prj).get('indoor') or []
+            if keep_in:
+                base['indoor'] = keep_in
+                say(f'　My Maps 沒有「室內範圍」圖層，改用 {os.path.basename(bk)}（{len(keep_in)} 個範圍）')
     say('底圖：' + '、'.join(f'{k} {len(v)}' for k, v in base.items() if v))
     greens, lan, ark = green_from_osm(prj)
     glass = ([ark] if ark else []) + [pl for pl, nm in base['glass']]
 
     sheets = []
     outlines = []
+    auto = []
     for s in (1, 2, 3, 4):
         sel = [p for p in pts if p['sheet'] == s]
         r0 = rect[s]
@@ -912,14 +922,21 @@ def main():
             cx = sum(p['x'] for p in grp[k]) / len(grp[k])
             cy = sum(p['y'] for p in grp[k]) / len(grp[k])
             cand = [pl for pl in mine if pl not in used_pl]
-            if not cand:
-                say(f'  ! 第 {s} 張的「{k}」在地圖上沒有範圍，那幾株會照常畫點')
-                grp['室外'] += grp.pop(k); continue
+
             def near(pl):
                 return math.hypot(sum(q[0] for q in pl) / len(pl) - cx,
                                   sum(q[1] for q in pl) / len(pl) - cy)
-            pl = min(cand, key=near)
-            used_pl.append(pl); shapes[k] = pl
+            # 他在 My Maps 畫了範圍就用他畫的；沒畫就照這幾株的位置框一個出來
+            pl = min(cand, key=near) if cand else None
+            if pl is None or near(pl) > 40:
+                b = 2.2
+                ax0 = min(q['x'] for q in grp[k]) - b; ax1 = max(q['x'] for q in grp[k]) + b
+                ay0 = min(q['y'] for q in grp[k]) - b; ay1 = max(q['y'] for q in grp[k]) + b
+                pl = [(ax0, ay0), (ax1, ay0), (ax1, ay1), (ax0, ay1)]
+                auto.append(f'第 {s} 張的「{k}」')
+            else:
+                used_pl.append(pl)
+            shapes[k] = pl
         for k in grp:
             grp[k].sort(key=lambda p: p['no'])
         sheets.append(dict(no=s, name=SHEET_NAME[s], x0=x0, x1=x1, y0=y0, y1=y1,
@@ -929,6 +946,8 @@ def main():
             + '、'.join(f'{g} {len(l)}' for g, l in sheets[-1]['groups'])
             + f"　範圍 {x1-x0:.0f}×{y1-y0:.0f} m")
 
+    if auto:
+        say('　沒有在 My Maps 畫範圍，照花點的位置自動框：' + '、'.join(auto))
     chars = set('0123456789～()（）、。，；：「」·.:/ -　©' + SITE + MAPURL + VER + UI_TEXT
                 + ''.join(p['n'] for p in pts) + ''.join(SHEET_NAME.values())
                 + ''.join(nm for k in base for _, nm in base[k] if nm))
