@@ -213,6 +213,16 @@ if any(f.lower().endswith('.kmz') for f in kmls):
         except Exception as e:
             say(f'  ! 解不開 {os.path.basename(f)}：{e}')
     kmls = out
+# 同一份地圖存成兩個檔名（下載兩次）的話只讀一次，不然每一株會變成兩株
+import hashlib                                                        # noqa: E402
+_seen, _uniq, _dup = set(), [], []
+for f in kmls:
+    h = hashlib.md5(open(f, 'rb').read()).hexdigest()
+    (_uniq if h not in _seen else _dup).append(f); _seen.add(h)
+if _dup:
+    say('　同樣內容的 KML 有好幾份，只讀一份：跳過 '
+        + '、'.join(os.path.basename(f) for f in _dup))
+kmls = _uniq
 say(f'地圖 KML：{len(kmls)} 個檔' + ('　（新的）' if kml_new else '　（沿用上次）'))
 
 NS = '{http://www.opengis.net/kml/2.2}'
@@ -245,9 +255,19 @@ say(f'　讀到 {sum(len(v) for v in pins.values())} 個點、{len(pins)} 個代
 BASE_KML = os.path.join(DATA, 'kml')
 if kml_new:
     prev = 0
-    for f in glob.glob(os.path.join(BASE_KML, '*.kml')):
+    done = set()
+    for f in sorted(glob.glob(os.path.join(BASE_KML, '*.kml'))):
         try:
-            prev += sum(1 for _ in ET.parse(f).getroot().iter(NS + 'Placemark'))
+            h = hashlib.md5(open(f, 'rb').read()).hexdigest()
+            if h in done:
+                continue
+            done.add(h)
+            # 跟 now 一樣只數「有編號的圖釘」，不要把步道、區域範圍也算進去
+            for p in ET.parse(f).getroot().iter(NS + 'Placemark'):
+                c = p.find('.//' + NS + 'coordinates')
+                if c is not None and c.text and \
+                        re.match(r'(\S+?-\d+)', (p.findtext(NS + 'name') or '').strip()):
+                    prev += 1
         except Exception:
             pass
     now = sum(len(v) for v in pins.values())
