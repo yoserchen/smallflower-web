@@ -30,6 +30,16 @@ MAPURL = f'https://{SITE}/tpbg/map/'
 NS = '{http://www.opengis.net/kml/2.2}'
 VER = 'v8'
 SHEET_NAME = {1: '方舟溫室', 2: '西北', 3: '東側', 4: '南側'}
+TAG = {'蘭房': '蘭', '溫室': '溫', '多肉溫室': '多'}
+UI_TEXT = (
+    '株，看背面　20 公尺　底圖資料 © OpenStreetMap 貢獻者　台北植物園花曆　第 張　'
+    '放大圖 AB　用編號查花　小格＝開花月份，一月到十二月　'
+    '地圖上的數字對照背面索引，號碼由北往南排列。'
+    '放大圖內的號碼請看放大圖。室內（）的不畫點，背面索引裡號碼後面有「」的就是。'
+    '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。'
+    '溫室蘭房多肉內外'
+)
+
 MIN_INDOOR = 20                # 室內範圍裡少於這麼多株，就照常畫點，不用號碼範圍帶過
 
 PW, PH = 297.0, 420.0          # A3 直式
@@ -111,13 +121,14 @@ def load():
         sp[str(r[0]).strip()] = dict(
             n=str(r[ci['中文名']]).strip(), up=str(r[ci['上地圖']] or '').strip(),
             st=str(r[ci['採用狀態']] or '').strip(),
+            inn=(str(r[ci['室內']] or '').strip() if '室內' in ci else ''),
             mo={int(x) for x in mo.split(',') if x.strip().isdigit()})
     rem = list(csv.DictReader(open(os.path.join(DATA, '圖釘編號.csv'), encoding='utf-8-sig'))) \
         if os.path.exists(os.path.join(DATA, '圖釘編號.csv')) else []
     nx = 0
     for r in rem:
         if r['內部代號'] not in sp:
-            sp[r['內部代號']] = dict(n=r['中文名'], up='是', st='現存', mo=set()); nx += 1
+            sp[r['內部代號']] = dict(n=r['中文名'], up='是', st='現存', inn='', mo=set()); nx += 1
     if nx:
         say(f'　主檔還沒有、圖釘已配號的：{nx} 個代號')
 
@@ -160,7 +171,8 @@ def load():
         if s['st'] != '現存':
             drop[s['st'] or '沒有狀態'] += len(v); continue
         for la, lo in v:
-            pts.append(dict(code=code, n=s['n'], mo=s['mo'], la=la, lo=lo))
+            pts.append(dict(code=code, n=s['n'], mo=s['mo'], inn=s.get('inn', ''),
+                            la=la, lo=lo))
     say(f'要印的點：{len(pts)} 個（{len({p["code"] for p in pts})} 個代號）')
     for k, n in drop.most_common():
         say(f'　排除 {k}：{n} 個點')
@@ -573,26 +585,47 @@ def draw_map(c, sheet, base, greens, F, qr):
     fw = lambda t, s: stringWidth(t, F['numb'], s) * 25.4 / 72
     fh = fs * 25.4 / 72 * 0.74
 
-    for key, pls in (('溫室', sheet.get('glass_pl') or []), ('蘭房', sheet.get('lan_pl') or [])):
-        rg = sheet['rng'].get(key)
-        if not rg or not pls:
-            continue
-        allp = [q for pl in pls for q in pl]
-        mm = [T(a, b) for a, b in allp]
-        cx = (min(m[0] for m in mm) + max(m[0] for m in mm)) / 2
-        cy = (min(m[1] for m in mm) + max(m[1] for m in mm)) / 2
-        for pl in pls:
-            mm2 = [T(a, b) for a, b in pl]
-            pp = c.beginPath(); pp.moveTo(*P(*mm2[0]))
-            for m in mm2[1:]:
-                pp.lineTo(*P(*m))
-            pp.close()
-            c.setFillColorRGB(0.992, 0.949, 0.961); c.setStrokeColorRGB(*BLOOM)
-            c.setLineWidth(0.6 * MM); c.drawPath(pp, 1, 1)
+    indoor_keep = []
+    for key, pl in (sheet.get('shapes') or {}).items():
+        n_in = next((len(v) for k, v in sheet['groups'] if k == key), 0)
+        mm2 = [T(a, b) for a, b in pl]
+        cx = (min(m[0] for m in mm2) + max(m[0] for m in mm2)) / 2
+        cy = (min(m[1] for m in mm2) + max(m[1] for m in mm2)) / 2
+        pp = c.beginPath(); pp.moveTo(*P(*mm2[0]))
+        for m in mm2[1:]:
+            pp.lineTo(*P(*m))
+        pp.close()
+        c.setFillColorRGB(0.992, 0.949, 0.961); c.setStrokeColorRGB(*BLOOM)
+        c.setLineWidth(0.6 * MM); c.drawPath(pp, 1, 1)
+        # 範圍框小的時候，字擺在框外面，不要壓出去
+        sub = f'{n_in} 株，看背面'
+        wmax = max(stringWidth(key, F['bold'], 8.5),
+                   stringWidth(sub, F['body'], 6.2)) * 25.4 / 72
+        bw2 = max(m[0] for m in mm2) - min(m[0] for m in mm2)
+        if wmax + 2 > bw2:
+            # 框太窄，字擺到框外。四個方向裡挑壓到最少花點的那一邊
+            ax0, ax1 = min(m[0] for m in mm2), max(m[0] for m in mm2)
+            ay0, ay1 = min(m[1] for m in mm2), max(m[1] for m in mm2)
+            dots = [T(q['x'], q['y']) for q in sheet['out']]
+            def cover(u, v):
+                r = (u - wmax / 2 - 1.6, v - 4.4, u + wmax / 2 + 1.6, v + 6.0)
+                n = sum(1 for a, b in dots if r[0] <= a <= r[2] and r[1] <= b <= r[3])
+                if r[0] < clip[0] or r[2] > clip[2] or r[1] < clip[1] or r[3] > clip[3]:
+                    n += 50
+                return n
+            cx, cy = min([((ax0 + ax1) / 2, ay1 + 4.6), ((ax0 + ax1) / 2, ay0 - 6.4),
+                          (ax0 - wmax / 2 - 2.5, (ay0 + ay1) / 2),
+                          (ax1 + wmax / 2 + 2.5, (ay0 + ay1) / 2)],
+                         key=lambda t: cover(*t))
+        c.setFillColorRGB(*PAPER)
+        c.rect(*P(cx - wmax / 2 - 1.2, cy + 5.4), (wmax + 2.4) * MM, 9.4 * MM, 0, 1)
+        indoor_keep.append((cx - wmax / 2 - 1.6, cy - 4.4, cx + wmax / 2 + 1.6, cy + 6.0))
+        indoor_keep.append((min(m[0] for m in mm2) - .8, min(m[1] for m in mm2) - .8,
+                            max(m[0] for m in mm2) + .8, max(m[1] for m in mm2) + .8))
         c.setFillColorRGB(*BLOOM); c.setFont(F['bold'], 8.5)
         c.drawCentredString(*P(cx, cy), key)
-        c.setFont(F['numb'], 7.5)
-        c.drawCentredString(*P(cx, cy + 4.4), f'{rg[0]}～{rg[1]}')
+        c.setFont(F['body'], 6.2)
+        c.drawCentredString(*P(cx, cy + 4.2), sub)
 
     insets = find_insets(sheet)
     iw, ih = 112.0, 88.0
@@ -650,7 +683,7 @@ def draw_map(c, sheet, base, greens, F, qr):
         say(f"  　第 {sheet['no']} 張 {g['tag']} 放在{ch[2]}"
             + (f"，蓋住 {ch[1]} 個點" if ch[1] else ''))
     # 放大圖的版面、來源框的邊和標籤，都先佔起來，標號就不會被蓋到
-    keep = []
+    keep = list(indoor_keep)
     for g in insets[:2]:
         keep.append((g['sx'] - 2.5, g['sy'] - 2.5, g['sx'] + g['w2'] + 2.5, g['sy'] + g['h2'] + 2.5))
     for g in insets:
@@ -747,7 +780,9 @@ def draw_map(c, sheet, base, greens, F, qr):
     dx = tx + 76
     for i, t in enumerate([
             f"{sheet['n_all']} 株。地圖上的數字對照背面索引，號碼由北往南排列。",
-            '放大圖內的號碼請看放大圖，溫室和蘭房裡面的只標號碼範圍。',
+            ('放大圖內的號碼請看放大圖。室內（' + '、'.join(sheet['shapes']) + '）的不畫點，'
+             '背面索引裡號碼後面有「' + '」「'.join(TAG[k] for k in sheet['shapes']) + '」的就是。'
+             if sheet.get('shapes') else '放大圖內的號碼請看放大圖。'),
             '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。']):
         c.drawString(*P(dx, top + 4.2 + i * 5.2), t)
     q = 16.0
@@ -775,11 +810,12 @@ def draw_index(c, sheet, F):
         c.line(*P(4, bh * j), *P(PW - 4, bh * j))
     c.setDash([])
 
-    rows = []
-    for g, lst in sheet['groups']:
-        if len(sheet['groups']) > 1:
-            rows.append(('H', g, min(p['no'] for p in lst), max(p['no'] for p in lst)))
-        rows += [('R', p) for p in lst]
+    # 一律照號碼排，不分段。室內的在號碼後面加一個「溫」或「蘭」，
+    # 因為那幾株在地圖上沒有點，只有一個範圍框。
+    rows = [(p, TAG.get(p['inn'], '')) for g, lst in sheet['groups'] for p in lst]
+    rows.sort(key=lambda r: r[0]['no'])
+    legend = sorted({(t, p['inn']) for p, t in rows if t})
+    tagged = bool(legend)
     nblk = COLS * BANDS
     per = math.ceil(len(rows) / nblk)
     pad = 7.0
@@ -795,7 +831,8 @@ def draw_index(c, sheet, F):
         c.setFillColorRGB(*INK); c.setFont(F['bold'], 8.5)
         c.drawString(*P(x, ytop + 4), f"第 {sheet['no']} 張　{sheet['name']}")
         c.setFillColorRGB(*LEAF); c.setFont(F['body'], 5.2)
-        c.drawString(*P(x, ytop + 8.6), '小格＝開花月份，一月到十二月')
+        c.drawString(*P(x, ytop + 8.6), '小格＝開花月份，一月到十二月'
+                     + ('　' + '、'.join(f'{t}＝{v}內' for t, v in legend) if tagged else ''))
         c.setStrokeColorRGB(*MIST); c.setLineWidth(.25 * MM)
         c.line(*P(x, ytop + 10.6), *P(x + cw - 12, ytop + 10.6))
 
@@ -804,18 +841,18 @@ def draw_index(c, sheet, F):
         band, col = divmod(k, COLS)
         x = cw * col + 6
         y = bh * band + pad + head + (i % per) * lh
-        if row[0] == 'H':
-            c.setFillColorRGB(*BLOOM); c.setFont(F['bold'], fs * .95)
-            c.drawString(*P(x, y + lh * .74), f'{row[1]}（{row[2]}～{row[3]}）')
-            continue
-        p = row[1]
+        p, tag = row
+        nx = 12.2 if tagged else 9.5          # 有室內標記的那一張，花名往右讓一格
         c.setFillColorRGB(*BLOOM); c.setFont(F['numb'], fs * .92)
         c.drawRightString(*P(x + 7.5, y + lh * .74), str(p['no']))
+        if tag:
+            c.setFont(F['body'], fs * .72)
+            c.drawString(*P(x + 8.4, y + lh * .72), tag)
         c.setFillColorRGB(*INK); c.setFont(F['body'], fs)
         nm = p['n']
-        while stringWidth(nm, F['body'], fs) * 25.4 / 72 > cw - 12 - 9.5 - 15 and len(nm) > 2:
+        while stringWidth(nm, F['body'], fs) * 25.4 / 72 > cw - 12 - nx - 15.5 and len(nm) > 2:
             nm = nm[:-1]
-        c.drawString(*P(x + 9.5, y + lh * .74), nm)
+        c.drawString(*P(x + nx, y + lh * .74), nm)
         bw = 1.12; bx = cw * col + cw - 6 - 12 * bw
         for mth in range(1, 13):
             c.setFillColorRGB(*(LEAF if mth in p['mo'] else (0.898, 0.914, 0.878)))
@@ -858,64 +895,42 @@ def main():
                 + '、'.join(f"{s}-{p['no']} {p['n']}" for p in off))
         inbox = lambda pl: (x0 <= sum(q[0] for q in pl) / len(pl) <= x1
                             and y0 <= sum(q[1] for q in pl) / len(pl) <= y1)
-        drawn = {k: [pl for pl, n2 in base.get('indoor', []) if n2 == k and inbox(pl)]
-                 for k in ('溫室', '蘭房')}
-        myglass = drawn['溫室'] or [g for g in glass if inbox(g)]
-        mylan = (drawn['蘭房'][0] if drawn['蘭房']
-                 else (lan if (lan and inbox(lan)) else None))
-        def band(sub):
-            """室內的號碼在 v7 是連號的；取最長的那一段，零星落在屋頂下的照樣當室外"""
-            ns = sorted(p['no'] for p in sub)
-            best = cur = [ns[0]] if ns else []
-            for a, b in zip(ns, ns[1:]):
-                if b - a <= 8:
-                    cur.append(b)
-                else:
-                    best = cur if len(cur) > len(best) else best; cur = [b]
-            best = cur if len(cur) > len(best) else best
-            return (best[0], best[-1]) if best else None
 
-        grp = {'室外': [], '蘭房內': [], '溫室內': []}
-        hit = {'蘭房內': [p for p in sel if mylan and inside((p['x'], p['y']), mylan)],
-               '溫室內': [p for p in sel if any(inside((p['x'], p['y']), g) for g in myglass)
-                       and not (mylan and inside((p['x'], p['y']), mylan))]}
-        # 只有一整片的室內（像第 1 張的溫室和蘭房）才用「號碼範圍」代替一個個點；
-        # 零星幾株照樣畫在圖上，這點跟 v7 一樣
-        bands = {k: band(v) for k, v in hit.items() if len(v) >= MIN_INDOOR}
+        # 誰在室內，完全看主檔的「室內」欄（蘭房／溫室／多肉溫室），不再用範圍框去猜
+        grp = collections.OrderedDict()
+        grp['室外'] = []
         for p in sel:
-            for k in ('蘭房內', '溫室內'):
-                b = bands.get(k)
-                if p in hit[k] and b and b[0] <= p['no'] <= b[1]:
-                    grp[k].append(p); break
-            else:
-                grp['室外'].append(p)
-        myglass = [g for g in myglass
-                   if any(inside((p['x'], p['y']), g) for p in grp['溫室內'])]
-        # 把現在用的輪廓輸出去，讓他在 My Maps 改成真正的溫室範圍
-        for key, pls in (('溫室', myglass), ('蘭房', [mylan] if mylan else [])):
-            if pls and not drawn[key] and grp[key + '內']:
-                outlines.append((key, max(pls, key=len)))
+            grp.setdefault(p['inn'] or '室外', []).append(p)
+        # 室內只有零星幾株的，照常畫在圖上（還是會在索引標記）
+        for k in [k for k in grp if k != '室外' and len(grp[k]) < MIN_INDOOR]:
+            grp['室外'] += grp.pop(k)
+
+        # 每一個室內群配一個他在 My Maps 畫的範圍：取中心最近的那一個
+        mine = [pl for pl, _ in base.get('indoor', []) if inbox(pl)]
+        used_pl, shapes = [], {}
+        for k in [k for k in grp if k != '室外']:
+            cx = sum(p['x'] for p in grp[k]) / len(grp[k])
+            cy = sum(p['y'] for p in grp[k]) / len(grp[k])
+            cand = [pl for pl in mine if pl not in used_pl]
+            if not cand:
+                say(f'  ! 第 {s} 張的「{k}」在地圖上沒有範圍，那幾株會照常畫點')
+                grp['室外'] += grp.pop(k); continue
+            def near(pl):
+                return math.hypot(sum(q[0] for q in pl) / len(pl) - cx,
+                                  sum(q[1] for q in pl) / len(pl) - cy)
+            pl = min(cand, key=near)
+            used_pl.append(pl); shapes[k] = pl
         for k in grp:
             grp[k].sort(key=lambda p: p['no'])
-        rng = {}
-        if grp['溫室內']:
-            rng['溫室'] = (grp['溫室內'][0]['no'], grp['溫室內'][-1]['no'])
-        if grp['蘭房內']:
-            rng['蘭房'] = (grp['蘭房內'][0]['no'], grp['蘭房內'][-1]['no'])
         sheets.append(dict(no=s, name=SHEET_NAME[s], x0=x0, x1=x1, y0=y0, y1=y1,
-                           out=grp['室外'], n_all=len(sel), rng=rng,
-                           glass_pl=myglass if grp['溫室內'] else None,
-                           lan_pl=[mylan] if (mylan and grp['蘭房內']) else None,
-                           groups=[(g, grp[g]) for g in ('室外', '蘭房內', '溫室內') if grp[g]]))
+                           out=grp['室外'], n_all=len(sel), shapes=shapes,
+                           groups=[(k, v) for k, v in grp.items() if v]))
         say(f"第 {s} 張　{SHEET_NAME[s]}　{len(sel)} 株　"
             + '、'.join(f'{g} {len(l)}' for g, l in sheets[-1]['groups'])
             + f"　範圍 {x1-x0:.0f}×{y1-y0:.0f} m")
 
-    chars = set('0123456789～()（）、。，；：「」·.:/ -　©' + SITE + MAPURL + VER
-                + '台北植物園花曆第張株地圖上的數字對照背面索引號碼由北往南排列放大內請看溫室和蘭房裡面只標範圍'
-                + '全部花名與開花月份對折四摺可放進口袋小格一到十二公尺用編號查底資料貢獻者'
+    chars = set('0123456789～()（）、。，；：「」·.:/ -　©' + SITE + MAPURL + VER + UI_TEXT
                 + ''.join(p['n'] for p in pts) + ''.join(SHEET_NAME.values())
-                + ''.join(g for s in sheets for g, _ in s['groups'])
                 + ''.join(nm for k in base for _, nm in base[k] if nm))
     chars |= set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     F = make_fonts(chars)
