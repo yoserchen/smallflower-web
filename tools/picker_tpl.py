@@ -31,6 +31,15 @@ input[type=search]{font:inherit;padding:9px 12px;border:1px solid var(--mist);bo
 #list .ct{font-size:12px;opacity:.6;font-variant-numeric:tabular-nums}
 #list .dot{width:7px;height:7px;border-radius:50%;background:var(--bloom);flex:none;visibility:hidden}
 #list button.edited .dot{visibility:visible}
+#list .nw{font-size:11px;font-weight:700;color:#fff;background:var(--bloom);border-radius:999px;
+  padding:1px 7px;flex:none;font-variant-numeric:tabular-nums}
+.batch{margin:0;font-size:12px;color:var(--leaf);line-height:1.5}
+.f.hot{border-color:var(--bloom);color:var(--bloom)}
+.f.hot[aria-pressed=true]{background:var(--bloom);color:#fff;border-color:var(--bloom)}
+.cell .w{position:absolute;bottom:6px;right:6px;font-size:11px;font-weight:700;color:#fff;
+  background:var(--bloom);border-radius:999px;padding:1px 7px}
+.cell.fresh{border-color:var(--bloom);border-style:dotted}
+.cell[data-sel].fresh{border-style:solid}
 main{overflow-y:auto;padding:18px 22px 60px;min-height:0}
 h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
 .meta{color:var(--leaf);font-size:14px;margin:0 0 14px}
@@ -73,10 +82,12 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
   <div class="bar">
     <input type="search" id="q" placeholder="搜尋花名…" autocomplete="off" />
     <div class="filters">
+      <button class="f" id="fNew" aria-pressed="false">新增照片</button>
       <button class="f" id="fAll" aria-pressed="true">全部</button>
       <button class="f" id="fEd" aria-pressed="false">已調整</button>
       <button class="f" id="fMany" aria-pressed="false">5 張以上</button>
     </div>
+    <p class="batch" id="batch"></p>
   </div>
   <div id="list"></div>
 </aside>
@@ -96,8 +107,11 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
     點照片選取，再點一次取消。<b>第一張選的就是大圖</b>，其餘依點選順序排在下面，最多 4 張。<br />
     照片右上角的 <b>✕</b> 是「這張不要用」。標掉的照片會變灰，永遠不會被自動挑到，也不會上網站；
     再點一次 ✕ 就解除。原始檔案不會被刪掉。<br />
-    左邊清單有紅點的是你調整過的。改完按「匯出」，把下載到的 photo_picks.json 放到
-    smallflower-web/tools/ 底下再重跑一次程式。<br />
+    左邊清單有紅點的是你調整過的，<b>+N</b> 是這一批新加了幾張。按上面的「新增照片」只看這一批，
+    由最新的照片日期往下排；照片右下角有<b>「新」</b>的就是這次新加的那幾張。<br />
+    改完按「匯出」，把下載到的 photo_picks.json 放到
+    smallflower-web/tools/ 底下再重跑一次程式。重跑之後「新增照片」還是同一批，
+    要等下次真的加了新照片才會換。<br />
     進度會自動存在這台電腦的瀏覽器裡，關掉再開還在。
   </p>
 </main>
@@ -124,6 +138,10 @@ for (var _n in picks) {
 }
 try { localStorage.removeItem('huali-picks-v1'); } catch (e) {}
 const names = Object.keys(SP).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+// 這一批新加照片的，照最新的照片日期排前面
+const NEW = names.filter((n) => SP[n].nw > 0)
+  .sort((a, b) => (SP[b].nd || '').localeCompare(SP[a].nd || '') || a.localeCompare(b, 'zh-Hant'));
+const nNew = NEW.reduce((s, n) => s + SP[n].nw, 0);
 let cur = names[0], mode = 'all', q = '';
 
 const $ = (id) => document.getElementById(id);
@@ -137,7 +155,8 @@ const save = () => {
 };
 
 function shown() {
-  return names.filter((n) => {
+  const base = mode === 'new' ? NEW : names;
+  return base.filter((n) => {
     if (q && !n.includes(q)) return false;
     if (mode === 'ed' && !picks[n]) return false;
     if (mode === 'many' && SP[n].n < 5) return false;
@@ -148,7 +167,9 @@ function drawList() {
   const f = document.createDocumentFragment();
   for (const n of shown()) {
     const b = document.createElement('button');
-    b.innerHTML = '<span class="dot"></span><span class="nm"></span><span class="ct">' + SP[n].n + '</span>';
+    b.innerHTML = '<span class="dot"></span><span class="nm"></span>'
+      + (SP[n].nw ? '<span class="nw">+' + SP[n].nw + '</span>' : '')
+      + '<span class="ct">' + SP[n].n + '</span>';
     b.querySelector('.nm').textContent = n;
     if (picks[n] || (bans[n] && bans[n].length)) b.classList.add('edited');
     if (n === cur) b.setAttribute('aria-current', 'true');
@@ -165,7 +186,8 @@ function drawMain() {
   $('nm').textContent = cur;
   const nb = ban(cur).length;
   $('mt').textContent = sp.n + ' 張照片　已選 ' + s.length + ' 張'
-    + (picks[cur] ? '（手動）' : '（自動）') + (nb ? '　不使用 ' + nb + ' 張' : '');
+    + (picks[cur] ? '（手動）' : '（自動）') + (nb ? '　不使用 ' + nb + ' 張' : '')
+    + (sp.nw ? '　這一批新增 ' + sp.nw + ' 張' : '');
   const f = document.createDocumentFragment();
   for (const p of sp.ph) {
     const c = document.createElement('button');
@@ -173,10 +195,12 @@ function drawMain() {
     const i = s.indexOf(p.k), xd = ban(cur).indexOf(p.k) >= 0;
     if (i >= 0) c.dataset.sel = i + 1;
     if (xd) c.dataset.x = '1';
+    if (p.w) c.classList.add('fresh');
     c.innerHTML = '<img loading="lazy" decoding="async" src="thumbs/' + sp.s + '/' + p.k +
       '.jpg" alt="" /><span class="b">' + (i >= 0 && i > 0 ? i + 1 : '') +
       '</span><span class="x" role="button" title="這張不要用">' + (xd ? '↩' : '✕') +
-      '</span><span class="dt">' + (p.d || '') + '</span>';
+      '</span><span class="dt">' + (p.d || '') + '</span>'
+      + (p.w ? '<span class="w">新</span>' : '');
     c.onclick = () => toggle(p.k);
     c.querySelector('.x').onclick = (e) => { e.stopPropagation(); toggleBan(p.k); };
     f.appendChild(c);
@@ -225,12 +249,28 @@ $('exp').onclick = () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 };
 $('q').oninput = (e) => { q = e.target.value.trim(); drawList(); };
-for (const [id, m] of [['fAll', 'all'], ['fEd', 'ed'], ['fMany', 'many']]) {
+const FIDS = ['fNew', 'fAll', 'fEd', 'fMany'];
+for (const [id, m] of [['fNew', 'new'], ['fAll', 'all'], ['fEd', 'ed'], ['fMany', 'many']]) {
   $(id).onclick = () => {
     mode = m;
-    for (const x of ['fAll', 'fEd', 'fMany']) $(x).setAttribute('aria-pressed', String(x === id));
-    drawList();
+    for (const x of FIDS) $(x).setAttribute('aria-pressed', String(x === id));
+    const l = shown();
+    if (l.length && l.indexOf(cur) < 0) cur = l[0];      // 切到新增時直接跳第一種
+    drawList(); drawMain();
   };
+}
+// 這一批新增了什麼，一進來就看得到
+$('fNew').classList.add('hot');
+if (nNew) {
+  $('batch').textContent = '這一批新增 ' + nNew + ' 張、' + NEW.length + ' 種'
+    + (DATA.batch ? '（' + DATA.batch + '）' : '');
+  $('fNew').textContent = '新增照片 ' + NEW.length;
+  mode = 'new'; cur = NEW[0];
+  $('fNew').setAttribute('aria-pressed', 'true');
+  $('fAll').setAttribute('aria-pressed', 'false');
+} else {
+  $('batch').textContent = '這一批沒有新照片。';
+  $('fNew').disabled = true; $('fNew').style.opacity = '.4';
 }
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;

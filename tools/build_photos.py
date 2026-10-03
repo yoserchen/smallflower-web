@@ -358,23 +358,60 @@ size = sum(os.path.getsize(os.path.join(dp, f))
 print(f'網站圖完成：{len(meta_out)} 種、{nfiles} 個檔案、{size/1e6:.0f} MB、{time.time()-t0:.0f} 秒')
 
 # ---------- 5. 挑片工具索引 ----------
+# 這一批新加的照片是哪些：跟上次跑完存下來的清單比對。
+# 沒有新的（例如挑完片回來再跑一次）就沿用上一批，這樣「新增照片」篩選不會消失。
+SNAP = os.path.join(ROOT, 'tools/data/照片快照.json')
+now_keys = {nm: {r['k'] for r in v.get('all_raw', v['all'])} for nm, v in scored.items()}
+try:
+    snap = json.load(open(SNAP, encoding='utf-8'))
+except Exception:
+    snap = {}
+old_keys = snap.get('keys') or {}
+fresh = {nm: sorted(ks - set(old_keys.get(nm, ())))
+         for nm, ks in now_keys.items() if ks - set(old_keys.get(nm, ()))}
+if not old_keys:
+    # 第一次用：拿不到上一批，就把最近 30 天拍的當成這一批
+    cut = time.time() - 30 * 86400
+    fresh = {nm: sorted(r['k'] for r in v.get('all_raw', v['all']) if r['ts'] and r['ts'] >= cut)
+             for nm, v in scored.items()}
+    fresh = {nm: ks for nm, ks in fresh.items() if ks}
+    batch = '最近 30 天拍的'
+elif fresh:
+    batch = datetime.date.today().isoformat()
+else:
+    fresh = {nm: [k for k in ks if k in now_keys.get(nm, ())]
+             for nm, ks in (snap.get('new') or {}).items()}
+    fresh = {nm: ks for nm, ks in fresh.items() if ks}
+    batch = snap.get('batch', '')
+n_fresh = sum(len(v) for v in fresh.values())
+print(f'這一批新增 {n_fresh} 張、{len(fresh)} 種'
+      + (f'（{batch}）' if batch else '') if n_fresh else '這一批沒有新照片')
+json.dump({'batch': batch, 'new': fresh,
+           'keys': {nm: sorted(ks) for nm, ks in now_keys.items()}},
+          open(SNAP, 'w', encoding='utf-8'), ensure_ascii=False)
+
+
 def ph_row(nm, r):
     o = {'k': r['k'], 'd': r['d'], 'a': r['a']}
     if r['k'] in banned.get(nm, ()):
         o['x'] = 1
+    if r['k'] in fresh.get(nm, ()):
+        o['w'] = 1
     return o
 
 
 # 挑片工具要看得到被排除的照片才能解除，所以這裡用未過濾的 all_raw
 pick_idx = {nm: {'s': v['s'],
                  'n': len(v.get('all_raw', v['all'])),
+                 'nw': len(fresh.get(nm, ())),
+                 'nd': max((r['d'] for r in v.get('all_raw', v['all']) if r['d']), default=''),
                  'ph': [ph_row(nm, r) for r in v.get('all_raw', v['all'])]}
             for nm, v in scored.items() if v.get('all_raw', v['all'])}
 current = {nm: [r['k'] for r in
                 ([x for k in manual[nm] for x in scored[nm]['all'] if x['k'] == k]
                  if nm in manual else auto_pick(scored[nm]['all']))]
            for nm in pick_idx}
-blob = json.dumps({'species': pick_idx, 'current': current},
+blob = json.dumps({'species': pick_idx, 'current': current, 'batch': batch},
                   ensure_ascii=False, separators=(',', ':'))
 
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
