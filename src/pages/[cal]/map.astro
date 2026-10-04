@@ -13,11 +13,18 @@ Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] ||
 const total = Object.keys(idx).length;
 ---
 <Base title={`${cal.place}口袋地圖`} cal={cal} current="map"
+      image="/map/preview.png" imageAlt={`${cal.place}口袋地圖的一角：荷花池周邊，每一株花一個編號`}
       description={`${cal.place}口袋地圖：把每一株花標在紙上，配一個編號。手上有地圖的話，在這裡輸入編號就能查到那是什麼花。`}>
   <section>
     <h1>{cal.place}口袋地圖</h1>
     <p class="sub">一張帶得出門的紙。{total} 株花標在圖上，每一株一個編號。
       在現場看到編號，回到這一頁一查，就知道那是什麼花、什麼時候開。</p>
+
+    <figure class="peek">
+      <img src="/map/preview.png" width="1400" height="875" loading="lazy" decoding="async"
+           alt={`口袋地圖的一角：${cal.place}荷花池周邊，每一株花標一個編號`} />
+      <figcaption>地圖的一角——荷花池周邊。每一個點是一株花，旁邊的號碼對照背面的花名。</figcaption>
+    </figure>
 
     <div class="lookup">
       <h2>手上有地圖，要查編號</h2>
@@ -79,6 +86,10 @@ const total = Object.keys(idx).length;
 </Base>
 <style>
 h2{font-family:var(--serif);font-size:22px;margin:34px 0 10px}
+.peek{margin:20px 0 0}
+.peek img{display:block;width:100%;height:auto;border:1px solid var(--mist);border-radius:14px;
+  background:var(--panel)}
+.peek figcaption{color:var(--leaf);font-size:13.5px;margin-top:8px;line-height:1.7}
 .lookup{border:1px solid var(--mist);border-radius:16px;padding:18px 20px 6px;background:var(--panel);
   margin:22px 0 0}
 .lookup h2{margin:0 0 10px;font-size:19px}
