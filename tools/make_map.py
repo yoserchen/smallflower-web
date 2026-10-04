@@ -123,6 +123,14 @@ def load():
             st=str(r[ci['採用狀態']] or '').strip(),
             inn=(str(r[ci['室內']] or '').strip() if '室內' in ci else ''),
             mo={int(x) for x in mo.split(',') if x.strip().isdigit()})
+    # 名稱對照表說「地圖不放／地圖不收錄」的，紙上也不要印，不然網站查不到那個號碼
+    mapx = set()
+    nt = os.path.join(DATA, '名稱對照表.csv')
+    if os.path.exists(nt):
+        for r in csv.DictReader(open(nt, encoding='utf-8-sig')):
+            if (r.get('處理方式') or '').strip() in ('地圖不收錄', '地圖不放'):
+                mapx.add((r.get('原名稱') or '').strip())
+
     rem = list(csv.DictReader(open(os.path.join(DATA, '圖釘編號.csv'), encoding='utf-8-sig'))) \
         if os.path.exists(os.path.join(DATA, '圖釘編號.csv')) else []
     nx = 0
@@ -170,6 +178,8 @@ def load():
             drop['上地圖＝否'] += len(v); continue
         if s['st'] != '現存':
             drop[s['st'] or '沒有狀態'] += len(v); continue
+        if s['n'] in mapx:
+            drop['名稱對照表 地圖不放'] += len(v); continue
         for la, lo in v:
             pts.append(dict(code=code, n=s['n'], mo=s['mo'], inn=s.get('inn', ''),
                             la=la, lo=lo))
