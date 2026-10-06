@@ -8,6 +8,8 @@
     python3 tools/make_passport.py 荷花池 薑區      # A4，只做這幾區
     python3 tools/make_passport.py --a3            # A3 兩張雙面，全部擠在一起（寄給贊助者）
     python3 tools/make_passport.py --a3 --pages 6  # 允許多一點頁數，字就可以更大
+    python3 tools/make_passport.py --split --out public/passport 荷花池 薑區
+                                                   # 一區一個檔，放進網站給人下載
 
 每一行是「☐ 地圖編號 花名」，找到或拍到就打個勾。
 A3 版的字級由程式自己找：在指定頁數內塞得下的最大字。
@@ -119,13 +121,23 @@ def main():
     a3 = '--a3' in args
     if a3:
         args.remove('--a3')
+    split = '--split' in args
+    if split:
+        args.remove('--split')
+    outdir = OUT
+    if '--out' in args:
+        i = args.index('--out')
+        outdir = args[i + 1]
+        if not os.path.isabs(outdir):
+            outdir = os.path.join(ROOT, outdir)
+        del args[i:i + 2]
     want_pages = 4
     if '--pages' in args:
         i = args.index('--pages'); want_pages = int(args[i + 1]); del args[i:i + 2]
     zones = load(args or None)
     if not zones:
         print('沒有要做的區域。'); sys.exit(1)
-    os.makedirs(OUT, exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
 
     chars = set(UI) | {c for _, g in zones for s in g for c in s['n']} \
         | {c for z, _ in zones for c in z}
@@ -151,26 +163,31 @@ def main():
     if not a3:
         # ---------- A4：一區一張，網站免費下載 ----------
         PW, PH = 210.0, 297.0
-        L = plan(PW, PH, 8.0, 22)
-        pdf = os.path.join(OUT, '拍花護照.pdf')
-        c = canvas.Canvas(pdf, pagesize=((PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
-        c.setTitle('台北植物園 拍花護照'); c.setAuthor('小花老師')
-        n = 0
-        for z, g in zones:
-            pages = [g[i:i + L['cap']] for i in range(0, len(g), L['cap'])] or [[]]
-            for pi, chunk in enumerate(pages, 1):
-                n += 1
-                tail = f"{len(g)} 種" + (f'　第 {pi} 頁／共 {len(pages)} 頁' if len(pages) > 1 else '')
-                P = frame(c, PW, PH, F, z, tail,
-                          note=any(not (s.get('no') or [''])[0] for s in chunk))
-                for i, s in enumerate(chunk):
-                    col, r = divmod(i, L['rows'])
-                    row(c, P, F, s, M + col * (L['cw'] + L['gut']), M + 22 + r * L['lh'],
-                        L['fs'], L['nox'], L['room'], stringWidth)
-                c.showPage()
-        c.save()
-        print(f"{pdf}　A4 {n} 頁、{len(zones)} 區、{len(allsp)} 種"
-              f"（{L['fs']:.0f}pt、一頁 {L['cap']} 格）")
+        LY = plan(PW, PH, 8.0, 22)
+        groups = [[(z, g)] for z, g in zones] if split else [zones]
+        for grp in groups:
+            name = '拍花護照' + (f'_{grp[0][0]}' if split else '') + '.pdf'
+            pdf = os.path.join(outdir, name)
+            c = canvas.Canvas(pdf, pagesize=((PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
+            c.setTitle('台北植物園 拍花護照'); c.setAuthor('小花老師')
+            n = 0
+            for z, g in grp:
+                pages = [g[i:i + LY['cap']] for i in range(0, len(g), LY['cap'])] or [[]]
+                for pi, chunk in enumerate(pages, 1):
+                    n += 1
+                    tail = f'{len(g)} 種' + (f'　第 {pi} 頁／共 {len(pages)} 頁'
+                                            if len(pages) > 1 else '')
+                    P = frame(c, PW, PH, F, z, tail,
+                              note=any(not (s.get('no') or [''])[0] for s in chunk))
+                    for i, s in enumerate(chunk):
+                        col, r = divmod(i, LY['rows'])
+                        row(c, P, F, s, M + col * (LY['cw'] + LY['gut']),
+                            M + 22 + r * LY['lh'], LY['fs'], LY['nox'], LY['room'],
+                            stringWidth)
+                    c.showPage()
+            c.save()
+            print(f"{pdf}　A4 {n} 頁、{sum(len(g) for _, g in grp)} 種"
+                  f"（{LY['fs']:.0f}pt、一頁 {LY['cap']} 格）")
         return
 
     # ---------- A3：兩張雙面，全部排在一起 ----------

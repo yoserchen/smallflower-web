@@ -1,0 +1,76 @@
+---
+import Base from '../../layouts/Base.astro';
+import { LIVE_CALENDARS, liveOf } from '../../lib.mjs';
+import { SPONSOR_1000_URL, AUTHOR } from '../../config.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.filter((c) => c.passport).map(
+    (c) => ({ params: { cal: c.slug }, props: { cal: c } }));
+}
+const { cal } = Astro.props;
+const live = liveOf(cal.slug);
+const byZone = {};
+live.forEach((s) => { const z = s.z || '其他'; byZone[z] = (byZone[z] || 0) + 1; });
+const open = (cal.passport || []).filter((z) => byZone[z]);
+const rest = Object.keys(byZone).filter((z) => !open.includes(z)).length;
+---
+<Base title={`${cal.place}拍花護照`} cal={cal} current="passport"
+      description={`${cal.place}拍花護照：一區一張的花名清單，找到或拍到就打個勾。可以自己印出來帶著走。`}>
+  <section>
+    <h1>{cal.place}拍花護照</h1>
+    <p class="sub">一張可以自己印的清單。<br />
+      這一區有哪些花，一行一種，找到或拍到就打個勾。</p>
+
+    <div class="steps">
+      <h2>怎麼用</h2>
+      <ol>
+        <li>挑一區，下載、印出來（A4 一張）</li>
+        <li>帶著它走進植物園，看到就打勾</li>
+        <li>打不完也沒關係——花不會同時開，一年四季慢慢來</li>
+      </ol>
+      <p class="note">每一行前面的號碼是找花地圖上的編號，手上有地圖的話可以直接對照。
+        號碼是「·」的，表示這一版地圖還沒收錄那一株。</p>
+    </div>
+
+    <h2>下載</h2>
+    <p>目前先開放兩區試用。好不好用、要不要再開放其他區，
+      歡迎到 FB 粉絲專頁告訴{AUTHOR}。</p>
+    <div class="dl">
+      {open.map((z) => (
+        <a class="zone" href={`/passport/${encodeURIComponent('拍花護照_' + z)}.pdf`}
+           download>
+          <b>{z}</b>
+          <span>{byZone[z]} 種</span>
+          <small>A4 一張 · PDF</small>
+        </a>
+      ))}
+    </div>
+    {rest > 0 && <p class="note">其他 {rest} 區還在整理，之後會陸續開放。</p>}
+
+    <div class="get">
+      <h2>完整版</h2>
+      <p>全園 {live.length.toLocaleString('en-US')} 種、23 個區域的完整護照，
+        印成 A3 大張的紙，字比自己印的還大一些，和<a href={`/${cal.slug}/map/`}>找花地圖</a>
+        一起寄給贊助 1000 元的朋友。</p>
+      <a class="btn solid" href={SPONSOR_1000_URL} target="_blank" rel="noopener">我要取得完整版</a>
+      <p class="hint">也可以先看看<a href="/support/">其他支持方式</a>。</p>
+    </div>
+  </section>
+</Base>
+<style>
+h2{font-family:var(--serif);font-size:22px;margin:34px 0 10px}
+.steps{border-top:1px solid var(--mist);margin-top:26px;padding-top:4px}
+.steps h2{margin-top:18px}
+.steps ol{max-width:34em;margin:0;padding-left:1.35em;line-height:2}
+.steps ol li::marker{color:var(--bloom);font-weight:700}
+.note{color:var(--leaf);font-size:14px;line-height:1.85;margin-top:14px;max-width:38em}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+.zone{display:grid;gap:3px;padding:18px 20px;border:1px solid var(--mist);border-radius:14px;
+  background:var(--panel);color:var(--ink);text-decoration:none}
+.zone:hover{border-color:var(--bloom)}
+.zone b{font-family:var(--serif);font-size:21px}
+.zone span{font-size:14px;color:var(--bloom);font-weight:700}
+.zone small{font-size:13px;color:var(--leaf)}
+.get{margin-top:38px;border-top:1px solid var(--mist);padding-top:6px}
+.get .btn{display:inline-block;text-decoration:none;margin-top:4px}
+.get .hint{margin-top:12px}
+</style>
