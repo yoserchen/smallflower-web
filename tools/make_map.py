@@ -30,6 +30,8 @@ MAPURL = f'https://{SITE}/tpbg/map/'
 NS = '{http://www.opengis.net/kml/2.2}'
 VER = '2026 年 10 月　V1.0 版'
 SHEET_NAME = {1: '方舟溫室', 2: '西北', 3: '東側', 4: '南側'}
+OSM_CREDIT = '底圖資料 © OpenStreetMap 貢獻者　openstreetmap.org/copyright'
+COPYRIGHT = '© 2026 小花老師　花卉記錄與編號版權所有，非賣品，請勿翻印轉載。'
 TAG = {'蘭房': '蘭', '溫室': '溫', '多肉溫室': '多'}
 UI_TEXT = (
     '株，看背面　20 公尺　底圖資料 © OpenStreetMap 貢獻者　台北植物園花曆　第 張　'
@@ -38,11 +40,13 @@ UI_TEXT = (
     '放大圖內的號碼請看放大圖。室內（）的不畫點，背面索引裡號碼後面有「」的就是。'
     '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。'
     '溫室蘭房多肉內外花卉位置非絕對精準定位，僅供參考。年月版'
+    + OSM_CREDIT + COPYRIGHT
 )
 
 MIN_INDOOR = 20                # 室內範圍裡少於這麼多株，就照常畫點，不用號碼範圍帶過
 
-PW, PH = 297.0, 420.0          # A3 直式
+PW, PH = 297.0, 420.0          # A3 直式（裁切後的成品尺寸）
+BLEED = 3.0                    # 四邊各留 3mm 出血，印好再裁掉
 M = 12.0
 FOOT = 42.0
 MAPH = PH - 2 * M - FOOT
@@ -69,7 +73,16 @@ def say(s=''):
 
 
 def P(x, y):
-    return x * MM, (PH - y) * MM
+    """版面座標（裁切後的 297×420）換成 PDF 座標，已經把出血讓出來"""
+    return (x + BLEED) * MM, (PH - y + BLEED) * MM
+
+
+def boxes(c):
+    """告訴印刷廠裁切線在哪裡：TrimBox 是成品、BleedBox 是含出血的整頁"""
+    b = BLEED * MM
+    c.setTrimBox((b, b, b + PW * MM, b + PH * MM))
+    c.setBleedBox((0, 0, (PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
+    c.setCropBox((0, 0, (PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
 
 
 def make_fonts(chars):
@@ -123,13 +136,19 @@ def load():
             st=str(r[ci['採用狀態']] or '').strip(),
             inn=(str(r[ci['室內']] or '').strip() if '室內' in ci else ''),
             mo={int(x) for x in mo.split(',') if x.strip().isdigit()})
-    # 名稱對照表說「地圖不放／地圖不收錄」的，紙上也不要印，不然網站查不到那個號碼
+    # 名稱對照表說「地圖不放／地圖不收錄」的，紙上也不要印，不然網站查不到那個號碼。
+    # 但已經有印刷編號的（上一版就印出去了）維持原樣，不然整張的新號碼會跟著位移。
     mapx = set()
     nt = os.path.join(DATA, '名稱對照表.csv')
     if os.path.exists(nt):
         for r in csv.DictReader(open(nt, encoding='utf-8-sig')):
             if (r.get('處理方式') or '').strip() in ('地圖不收錄', '地圖不放'):
                 mapx.add((r.get('原名稱') or '').strip())
+    had = set()
+    pf = os.path.join(DATA, '印刷編號.csv')
+    if os.path.exists(pf):
+        had = {r['內部代號'] for r in csv.DictReader(open(pf, encoding='utf-8-sig'))
+               if r.get('印刷編號')}
 
     rem = list(csv.DictReader(open(os.path.join(DATA, '圖釘編號.csv'), encoding='utf-8-sig'))) \
         if os.path.exists(os.path.join(DATA, '圖釘編號.csv')) else []
@@ -178,7 +197,7 @@ def load():
             drop['上地圖＝否'] += len(v); continue
         if s['st'] != '現存':
             drop[s['st'] or '沒有狀態'] += len(v); continue
-        if s['n'] in mapx:
+        if s['n'] in mapx and code not in had:
             drop['名稱對照表 地圖不放'] += len(v); continue
         for la, lo in v:
             pts.append(dict(code=code, n=s['n'], mo=s['mo'], inn=s.get('inn', ''),
@@ -588,7 +607,9 @@ def draw_map(c, sheet, base, greens, F, qr):
     def T(x, y):
         return ox + (x - sheet['x0']) * sc, oy + (y - sheet['y0']) * sc
     clip = (ox, oy, ox + dw, oy + dh)
-    c.setFillColorRGB(*PAPER); c.rect(0, 0, PW * MM, PH * MM, 0, 1)
+    boxes(c)
+    c.setFillColorRGB(*PAPER)
+    c.rect(0, 0, (PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM, 0, 1)
     paint(c, base, greens, T, clip, F=F)
 
     fs = 4.4
@@ -714,7 +735,7 @@ def draw_map(c, sheet, base, greens, F, qr):
         return y
     sheet['bar'] = (ox + 3.6, ox + 5 + bar + 22,
                     clear(ox + 3.6, ox + 5 + bar + 22, oy + dh - 5))
-    sheet['cred'] = (ox + dw - 52, ox + dw - 2,
+    sheet['cred'] = (ox + dw - 86, ox + dw - 2,
                      clear(ox + dw - 52, ox + dw - 2, oy + dh - 5))
     for a, b, y in (sheet['bar'], sheet['cred']):
         keep.append((a - 1, y - 3.4, b + 1, y + 4.4))
@@ -770,7 +791,7 @@ def draw_map(c, sheet, base, greens, F, qr):
     c.drawString(*P(ox + 5 + bar + 1.5, by + 1.2), '20 公尺')
     cy2 = sheet['cred'][2]
     c.setFont(F['body'], 5); c.setFillColorRGB(0.45, 0.5, 0.44)
-    c.drawRightString(*P(ox + dw - 2, cy2 + 1.2), '底圖資料 © OpenStreetMap 貢獻者')
+    c.drawRightString(*P(ox + dw - 2, cy2 + 1.2), OSM_CREDIT)
     c.setStrokeColorRGB(*MIST); c.setLineWidth(.3 * MM)
     c.rect(*P(ox, oy + dh), dw * MM, dh * MM, 1, 0)
 
@@ -794,7 +815,8 @@ def draw_map(c, sheet, base, greens, F, qr):
              '背面索引裡號碼後面有「' + '」「'.join(TAG[k] for k in sheet['shapes']) + '」的就是。'
              if sheet.get('shapes') else '放大圖內的號碼請看放大圖。'),
             '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。',
-            '花卉位置非絕對精準定位，僅供參考。']):
+            '花卉位置非絕對精準定位，僅供參考。',
+            COPYRIGHT]):
         c.drawString(*P(dx, top + 4.2 + i * 5.2), t)
     q = 16.0
     if qr:
@@ -810,8 +832,11 @@ def draw_map(c, sheet, base, greens, F, qr):
 def draw_index(c, sheet, F):
     """背面：四欄 × 上下兩段 ＝ 八格，對摺四摺再對摺一次就是口袋大小（照 v7）"""
     from reportlab.pdfbase.pdfmetrics import stringWidth
-    c.setFillColorRGB(*PAPER); c.rect(0, 0, PW * MM, PH * MM, 0, 1)
+    boxes(c)
+    c.setFillColorRGB(*PAPER)
+    c.rect(0, 0, (PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM, 0, 1)
     COLS, BANDS = 4, 2
+    IM = 9.0                     # 索引離裁切邊的留白
     cw = PW / COLS; bh = PH / BANDS
     # 摺線：直的三條、橫的一條
     c.setStrokeColorRGB(*MIST); c.setLineWidth(.2 * MM); c.setDash([1 * MM, 2 * MM])
@@ -829,7 +854,7 @@ def draw_index(c, sheet, F):
     tagged = bool(legend)
     nblk = COLS * BANDS
     per = math.ceil(len(rows) / nblk)
-    pad = 7.0
+    pad = 9.0
     head = 14.0
     avail = bh - pad * 2 - head
     lh = min(4.8, avail / max(per, 1))
@@ -837,7 +862,7 @@ def draw_index(c, sheet, F):
 
     for k in range(nblk):
         band, col = divmod(k, COLS)
-        x = cw * col + 6
+        x = cw * col + IM
         ytop = bh * band + pad
         c.setFillColorRGB(*INK); c.setFont(F['bold'], 8.5)
         c.drawString(*P(x, ytop + 4), f"第 {sheet['no']} 張　{sheet['name']}")
@@ -845,12 +870,12 @@ def draw_index(c, sheet, F):
         c.drawString(*P(x, ytop + 8.6), '小格＝開花月份，一月到十二月'
                      + ('　' + '、'.join(f'{t}＝{v}內' for t, v in legend) if tagged else ''))
         c.setStrokeColorRGB(*MIST); c.setLineWidth(.25 * MM)
-        c.line(*P(x, ytop + 10.6), *P(x + cw - 12, ytop + 10.6))
+        c.line(*P(x, ytop + 10.6), *P(x + cw - IM * 2, ytop + 10.6))
 
     for i, row in enumerate(rows):
         k = i // per
         band, col = divmod(k, COLS)
-        x = cw * col + 6
+        x = cw * col + IM
         y = bh * band + pad + head + (i % per) * lh
         p, tag = row
         nx = 12.2 if tagged else 9.5          # 有室內標記的那一張，花名往右讓一格
@@ -861,10 +886,10 @@ def draw_index(c, sheet, F):
             c.drawString(*P(x + 8.4, y + lh * .72), tag)
         c.setFillColorRGB(*INK); c.setFont(F['body'], fs)
         nm = p['n']
-        while stringWidth(nm, F['body'], fs) * 25.4 / 72 > cw - 12 - nx - 15.5 and len(nm) > 2:
+        while stringWidth(nm, F['body'], fs) * 25.4 / 72 > cw - IM * 2 - nx - 15.5 and len(nm) > 2:
             nm = nm[:-1]
         c.drawString(*P(x + nx, y + lh * .74), nm)
-        bw = 1.12; bx = cw * col + cw - 6 - 12 * bw
+        bw = 1.12; bx = cw * col + cw - IM - 12 * bw
         for mth in range(1, 13):
             c.setFillColorRGB(*(LEAF if mth in p['mo'] else (0.898, 0.914, 0.878)))
             c.rect(*P(bx + (mth - 1) * bw, y + lh * .72), bw * .75 * MM, lh * .48 * MM, 0, 1)
@@ -972,7 +997,7 @@ def main():
 
     from reportlab.pdfgen import canvas
     pdf = os.path.join(OUT, '口袋地圖.pdf')
-    c = canvas.Canvas(pdf, pagesize=(PW * MM, PH * MM))
+    c = canvas.Canvas(pdf, pagesize=((PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
     c.setTitle('台北植物園花曆口袋地圖')
     for s in sheets:
         draw_map(c, s, base, greens, F, qr)

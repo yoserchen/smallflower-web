@@ -1,22 +1,54 @@
 ---
 import Base from '../layouts/Base.astro';
-import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
+import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
 import { BRAND, AUTHOR, GOATCOUNTER } from '../config.mjs';
 const cards = LIVE_CALENDARS.map((c) => ({ ...c, n: liveOf(c.slug).length }));
 const total = cards.reduce((a, c) => a + c.n, 0);
+// 數字一律從資料算出來，不要寫死，免得改了資料忘了改文案
+const all = LIVE_CALENDARS.flatMap((c) => speciesOf(c.slug));
+const shots = Math.round(all.reduce((a, s) => a + (s.c || 0), 0));
+const onMap = new Set(all.flatMap((s) => s.no || [])).size;
+const main = cards.find((c) => c.hasMap) || cards[0];
+const nf = (n) => n.toLocaleString('en-US');
 ---
-<Base description={`${AUTHOR}實地記錄的花曆，每一種花什麼時候開、開在哪裡。目前收錄 ${total.toLocaleString()} 種。`}>
+<Base description={`${AUTHOR}實地記錄的花曆：每一種花什麼時候開、開在哪裡。目前收錄 ${nf(total)} 種。`}>
   <section class="top">
     <h1>{BRAND}</h1>
-    <p class="lead">每一種花什麼時候開、開在哪裡，都是實地一株一株拍下來記的。目前收錄 {total.toLocaleString()} 種。</p>
+    <p class="lead">植物園有一千多種花，走進去，多半只看得到一片綠。<br />
+      這三年我每週進園，把看到的花一株一株拍下來，
+      記下它叫什麼、什麼時候開、開在哪裡。</p>
+    <ul class="nums">
+      <li><b>{nf(total)}</b><span>種花</span></li>
+      <li><b>{nf(shots)}</b><span>筆開花記錄</span></li>
+      {onMap > 0 && <li><b>{nf(onMap)}</b><span>株標進地圖</span></li>}
+    </ul>
+    {main && (
+      <div class="cta">
+        <a class="btn solid" href={`/${main.slug}/`}>找今天開的花</a>
+        {main.hasMap && <a class="btn" href={`/${main.slug}/map/`}>我要一份找花地圖</a>}
+      </div>
+    )}
   </section>
+
+  <section class="how">
+    <h2>在現場，怎麼知道這是什麼花</h2>
+    <ol>
+      <li>走著走著，看到一朵花，不知道它叫什麼</li>
+      <li>翻開找花地圖，找到你站的位置，看那一株的編號</li>
+      <li>編號背面就是花名和花季，當場就知道</li>
+      <li>想看它別的季節長什麼樣，回到這裡輸入編號</li>
+    </ol>
+    <p class="note">你不需要先認識植物。帶著地圖走進植物園，開始找就好。</p>
+  </section>
+
   <section>
+    <h2 class="qh">花曆</h2>
     <div class="cards">
       {cards.map((c) => (
         <a class="card" href={`/${c.slug}/`}>
           <b>{c.name}</b>
           <p>{c.blurb}</p>
-          <span>{c.n.toLocaleString()} 種{c.hasMap && '　附口袋地圖'}</span>
+          <span>{nf(c.n)} 種{c.hasMap && '　附找花地圖'}</span>
         </a>
       ))}
       <div class="card soon">
@@ -46,6 +78,19 @@ const total = cards.reduce((a, c) => a + c.n, 0);
 </Base>
 <style>
 .top{padding:56px 0 8px}
+.top .lead{max-width:34em;font-size:17px;line-height:1.9}
+.nums{list-style:none;display:flex;flex-wrap:wrap;gap:10px 34px;padding:0;margin:26px 0 0}
+.nums li{display:flex;align-items:baseline;gap:6px}
+.nums b{font-family:var(--serif);font-size:30px;color:var(--bloom);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.nums span{font-size:14px;color:var(--leaf)}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 44px}
+.cta .btn{text-decoration:none}
+.how{border-top:1px solid var(--mist);padding-top:28px;margin-bottom:8px}
+.how h2,.qh{font-family:var(--serif);font-size:22px;margin:0 0 14px}
+.how ol{max-width:34em;margin:0;padding-left:1.35em;line-height:2}
+.how ol li::marker{color:var(--bloom);font-weight:700}
+.how .note{color:var(--leaf);margin:14px 0 0}
 .views{text-align:center;color:var(--leaf);font-size:14px;margin:8px 0 40px}
 .views b{color:var(--ink);font-variant-numeric:tabular-nums}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
@@ -56,4 +101,5 @@ const total = cards.reduce((a, c) => a + c.n, 0);
 .card:hover{border-color:var(--bloom)}
 .card.soon{background:transparent;border-style:dashed}
 .card.soon b,.card.soon p{color:var(--leaf)}
+@media (max-width:560px){.top{padding:34px 0 8px}.nums{gap:10px 24px}.nums b{font-size:26px}}
 </style>
