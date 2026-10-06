@@ -160,34 +160,68 @@ def main():
         return dict(fs=fs, nox=nox, room=room, cw=cw, gut=gut,
                     cols=cols, lh=lh, rows=rows, cap=cols * rows, over=over)
 
+    def fill(PW, PH, n, head, pages=1, maxfs=13.0):
+        """把 n 行塞滿整頁：試每一種欄數，挑字能放最大的那一個"""
+        W = PW - 2 * M
+        H = PH - 2 * M - head - 9
+        best = None
+        for cols in range(1, 9):
+            rows = -(-n // (cols * pages))
+            if rows < 1:
+                continue
+            fs = min(maxfs, (H / rows) / 0.625)
+            if fs < 6:
+                continue
+            L = plan(PW, PH, fs, head)            # 這個字級下一欄要多寬
+            if L['cw'] + L['gut'] > W / cols + L['gut'] - 0.1:
+                continue                          # 這麼多欄放不下
+            cw = (W - L['gut'] * (cols - 1)) / cols
+            # 欄變寬了，花名可以用的寬度也要跟著放寬，不然白白截字
+            L = dict(L, cols=cols, rows=rows, cap=cols * rows, cw=cw,
+                     room=max(L['room'], cw - L['nox'] - 2.5))
+            if best is None or L['fs'] > best['fs']:
+                best = L
+        return best
+
     if not a3:
         # ---------- A4：一區一張，網站免費下載 ----------
         PW, PH = 210.0, 297.0
-        LY = plan(PW, PH, 8.0, 22)
         groups = [[(z, g)] for z, g in zones] if split else [zones]
         for grp in groups:
             name = '拍花護照' + (f'_{grp[0][0]}' if split else '') + '.pdf'
             pdf = os.path.join(outdir, name)
-            c = canvas.Canvas(pdf, pagesize=((PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
-            c.setTitle('台北植物園 拍花護照'); c.setAuthor('小花老師')
+            cv = canvas.Canvas(pdf, pagesize=((PW + 2 * BLEED) * MM, (PH + 2 * BLEED) * MM))
+            cv.setTitle('台北植物園 拍花護照'); cv.setAuthor('小花老師')
             n = 0
             for z, g in grp:
+                # 一區一張：讓字放到最大，排滿整頁；真的塞不下才用第二頁
+                LY = None
+                for np in (1, 2, 3):
+                    LY = fill(PW, PH, len(g), 22, pages=np)
+                    if LY and LY['fs'] >= (9.0 if np == 1 else 7.5):
+                        break
+                if not LY:
+                    LY = plan(PW, PH, 8.0, 22)
                 pages = [g[i:i + LY['cap']] for i in range(0, len(g), LY['cap'])] or [[]]
                 for pi, chunk in enumerate(pages, 1):
                     n += 1
                     tail = f'{len(g)} 種' + (f'　第 {pi} 頁／共 {len(pages)} 頁'
                                             if len(pages) > 1 else '')
-                    P = frame(c, PW, PH, F, z, tail,
+                    P = frame(cv, PW, PH, F, z, tail,
                               note=any(not (s.get('no') or [''])[0] for s in chunk))
+                    rows = -(-len(chunk) // LY['cols'])      # 最後一頁也排得平均
                     for i, s in enumerate(chunk):
-                        col, r = divmod(i, LY['rows'])
-                        row(c, P, F, s, M + col * (LY['cw'] + LY['gut']),
+                        col, r = divmod(i, rows)
+                        row(cv, P, F, s, M + col * (LY['cw'] + LY['gut']),
                             M + 22 + r * LY['lh'], LY['fs'], LY['nox'], LY['room'],
                             stringWidth)
-                    c.showPage()
-            c.save()
-            print(f"{pdf}　A4 {n} 頁、{sum(len(g) for _, g in grp)} 種"
-                  f"（{LY['fs']:.0f}pt、一頁 {LY['cap']} 格）")
+                    cv.showPage()
+                if split:
+                    print(f"{pdf}　A4 {n} 頁、{len(g)} 種"
+                          f"（{LY['fs']:.1f}pt、{LY['cols']} 欄 × {LY['rows']} 行）")
+            cv.save()
+            if not split:
+                print(f"{pdf}　A4 {n} 頁、{sum(len(g) for _, g in grp)} 種")
         return
 
     # ---------- A3：兩張雙面，全部排在一起 ----------
