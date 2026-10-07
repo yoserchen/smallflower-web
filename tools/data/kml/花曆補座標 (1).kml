@@ -6017,7 +6017,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>舟後-84 可可樹</name>
+        <name>舟後-84 可可</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -7817,15 +7817,6 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>舟後-04 可可樹</name>
-        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
-        <Point>
-          <coordinates>
-            121.509119,25.033024,0
-          </coordinates>
-        </Point>
-      </Placemark>
-      <Placemark>
         <name>舟後-11 神秘果</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
@@ -8632,15 +8623,6 @@
         <Point>
           <coordinates>
             121.509163,25.032961,0
-          </coordinates>
-        </Point>
-      </Placemark>
-      <Placemark>
-        <name>舟-62 秋海棠</name>
-        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
-        <Point>
-          <coordinates>
-            121.509205,25.032928,0
           </coordinates>
         </Point>
       </Placemark>
@@ -11024,7 +11006,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>佛-03 小菫菜</name>
+        <name>佛-03 小堇菜</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -13412,7 +13394,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>蕨-18 蟠龍石斛蘭</name>
+        <name>蕨-18 蟠龍石斛</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -15953,7 +15935,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>原-20 越橘葉曼絨</name>
+        <name>原-20 越橘葉蔓榕</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -16583,7 +16565,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>地-14 小菫菜</name>
+        <name>地-14 小堇菜</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -19637,7 +19619,7 @@
         </Point>
       </Placemark>
       <Placemark>
-        <name>園-08 小菫菜</name>
+        <name>園-08 小堇菜</name>
         <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
         <Point>
           <coordinates>
@@ -19894,15 +19876,6 @@
         <Point>
           <coordinates>
             121.509056,25.03161,0
-          </coordinates>
-        </Point>
-      </Placemark>
-      <Placemark>
-        <name>園-45 越橘葉蔓榕</name>
-        <styleUrl>#icon-1899-0288D1-nodesc</styleUrl>
-        <Point>
-          <coordinates>
-            121.508905,25.031263,0
           </coordinates>
         </Point>
       </Placemark>

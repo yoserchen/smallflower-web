@@ -107,9 +107,16 @@ def row(c, P, F, s, x, y, fs, nox, room, stringWidth):
     no = (s.get('no') or [''])[0]
     c.setFillColorRGB(*BLOOM); c.setFont(F['numb'], fs * .88)
     c.drawString(*P(x + bs + 1.7, y + bs), no or '·')
-    c.setFillColorRGB(*INK); c.setFont(F['body'], fs)
+    c.setFillColorRGB(*INK)
     nm = s['n']
-    while stringWidth(nm, F['body'], fs) * 25.4 / 72 > room and len(nm) > 2:
+    # 欄寬是照大多數花名算的，少數特別長的（加勒比海盜秋海棠、達爾馬提亞風鈴草）
+    # 塞不下。以前是直接把後面的字切掉，印出來就變成「加勒比海盜秋海」——
+    # 清單上少一個字等於另一種花，寧可把那一行的字縮小一點也要印完整。
+    f2 = fs
+    while stringWidth(nm, F['body'], f2) * 25.4 / 72 > room and f2 > fs * 0.68:
+        f2 -= fs * 0.02
+    c.setFont(F['body'], f2)
+    while stringWidth(nm, F['body'], f2) * 25.4 / 72 > room and len(nm) > 2:
         nm = nm[:-1]
     c.drawString(*P(x + nox, y + bs), nm)
 
@@ -290,7 +297,7 @@ def main():
     c.showPage(); c.save()
     print(f"{pdf}　A3 {page} 頁（{(page + 1) // 2} 張雙面）、{len(zones)} 區、{len(allsp)} 種")
     print(f"　字級 {L['fs']}pt、{L['cols']} 欄 × {L['rows']} 行、欄寬 {L['cw']:.1f}mm"
-          f"（最長的 {L['over']} 個花名會截字）")
+          f"（最長的 {L['over']} 個花名會自動縮小字級，不會被截掉）")
 
 
 if __name__ == '__main__':

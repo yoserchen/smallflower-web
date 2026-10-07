@@ -35,7 +35,7 @@ COPYRIGHT = '© 2026 小花老師　花卉記錄與編號版權所有，非賣�
 TAG = {'蘭房': '蘭', '溫室': '溫', '多肉溫室': '多'}
 UI_TEXT = (
     '株，看背面　20 公尺　底圖資料 © OpenStreetMap 貢獻者　台北植物園花曆　第 張　'
-    '放大圖 AB　用編號查花　小格＝開花月份，一月到十二月　'
+    '放大圖 AB　用編號查花　方框＝找到就打勾　小格＝開花月份，一月到十二月　'
     '地圖上的數字對照背面索引，號碼由北往南排列。'
     '放大圖內的號碼請看放大圖。室內（）的不畫點，背面索引裡號碼後面有「」的就是。'
     '背面是這一張的全部花名與開花月份，對折四摺可放進口袋。'
@@ -44,6 +44,7 @@ UI_TEXT = (
 )
 
 MIN_INDOOR = 20                # 室內範圍裡少於這麼多株，就照常畫點，不用號碼範圍帶過
+MAX_HIDE = 5                   # 第二張放大圖最多只能蓋住這麼多個花點，超過就不放
 
 PW, PH = 297.0, 420.0          # A3 直式（裁切後的成品尺寸）
 BLEED = 3.0                    # 四邊各留 3mm 出血，印好再裁掉
@@ -131,9 +132,20 @@ def load():
         if not r or not r[0]:
             continue
         mo = str(r[ci['採用月份']] or '').replace('，', ',')
+        if not mo and '自動開花月份' in ci:
+            mo = str(r[ci['自動開花月份']] or '').replace('，', ',')
+        # 「採用狀態」是試算表的公式 =IF(狀態修正="",自動狀態,狀態修正)。
+        # 剛貼進去的新花那幾列公式還沒拉下來，整排都是空的。
+        # 空白不代表「不要印」，所以自己把公式算一遍；真的全空就當現存——
+        # 跟下面「主檔還沒有、圖釘已配號的」那段一樣的處理。
+        st = str(r[ci['採用狀態']] or '').strip()
+        if not st:
+            st = (str(r[ci['狀態修正']] or '').strip()
+                  or str(r[ci['自動狀態']] or '').strip()
+                  or '現存')
         sp[str(r[0]).strip()] = dict(
             n=str(r[ci['中文名']]).strip(), up=str(r[ci['上地圖']] or '').strip(),
-            st=str(r[ci['採用狀態']] or '').strip(),
+            st=st,
             inn=(str(r[ci['室內']] or '').strip() if '室內' in ci else ''),
             mo={int(x) for x in mo.split(',') if x.strip().isdigit()})
     # 名稱對照表說「地圖不放／地圖不收錄」的，紙上也不要印，不然網站查不到那個號碼。
@@ -706,6 +718,13 @@ def draw_map(c, sheet, base, greens, F, qr):
                 if best is None or t < best[0]:
                     best = (t, a, b)
         chosen = [best[1], best[2]] if best else [A[0], B[0]]
+        # 放大圖是為了把擠在一起的號碼放大看清楚。
+        # 如果它反過來把一堆花點壓在底下，那就得不償失——寧可不放第二張。
+        if chosen[1][1] > MAX_HIDE:
+            say(f"  　第 {sheet['no']} 張 放大圖 B 不管放哪裡都會蓋住 "
+                f"{chosen[1][1]} 個點，不放")
+            insets = insets[:1]; srcs = srcs[:1]
+            chosen = [min(spots(insets[0]))]
     else:
         chosen = [min(spots(insets[0]))]
     sheet['panels'] = [ch[5] for ch in chosen]
@@ -859,6 +878,7 @@ def draw_index(c, sheet, F):
     avail = bh - pad * 2 - head
     lh = min(4.8, avail / max(per, 1))
     fs = min(7.0, lh * 1.5)
+    cb = min(2.3, lh * .62)      # 打勾的小框，跟著行高走
 
     for k in range(nblk):
         band, col = divmod(k, COLS)
@@ -867,7 +887,7 @@ def draw_index(c, sheet, F):
         c.setFillColorRGB(*INK); c.setFont(F['bold'], 8.5)
         c.drawString(*P(x, ytop + 4), f"第 {sheet['no']} 張　{sheet['name']}")
         c.setFillColorRGB(*LEAF); c.setFont(F['body'], 5.2)
-        c.drawString(*P(x, ytop + 8.6), '小格＝開花月份，一月到十二月'
+        c.drawString(*P(x, ytop + 8.6), '方框＝找到就打勾　小格＝開花月份，一月到十二月'
                      + ('　' + '、'.join(f'{t}＝{v}內' for t, v in legend) if tagged else ''))
         c.setStrokeColorRGB(*MIST); c.setLineWidth(.25 * MM)
         c.line(*P(x, ytop + 10.6), *P(x + cw - IM * 2, ytop + 10.6))
@@ -878,12 +898,17 @@ def draw_index(c, sheet, F):
         x = cw * col + IM
         y = bh * band + pad + head + (i % per) * lh
         p, tag = row
-        nx = 12.2 if tagged else 9.5          # 有室內標記的那一張，花名往右讓一格
+        # 每一行最前面一個小框：這一面就是拍花護照，找到就打勾。
+        # 右邊花名和月份小格中間本來就空著十幾公釐，整排往右讓一點就夠了。
+        c.setStrokeColorRGB(*LEAF); c.setLineWidth(.17 * MM)
+        c.rect(*P(x, y + lh * .76), cb * MM, cb * MM, 1, 0)
+        ox = cb + 1.3
+        nx = ox + (12.2 if tagged else 9.5)   # 有室內標記的那一張，花名往右讓一格
         c.setFillColorRGB(*BLOOM); c.setFont(F['numb'], fs * .92)
-        c.drawRightString(*P(x + 7.5, y + lh * .74), str(p['no']))
+        c.drawRightString(*P(x + ox + 7.5, y + lh * .74), str(p['no']))
         if tag:
             c.setFont(F['body'], fs * .72)
-            c.drawString(*P(x + 8.4, y + lh * .72), tag)
+            c.drawString(*P(x + ox + 8.4, y + lh * .72), tag)
         c.setFillColorRGB(*INK); c.setFont(F['body'], fs)
         nm = p['n']
         while stringWidth(nm, F['body'], fs) * 25.4 / 72 > cw - IM * 2 - nx - 15.5 and len(nm) > 2:
