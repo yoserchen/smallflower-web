@@ -40,4 +40,6 @@ export const byNo = (a, b) => {
   const x = noKey(a.no[0]), y = noKey(b.no[0]);
   return x[0] - y[0] || x[1] - y[1] || a.n.localeCompare(b.n, 'zh-Hant');
 };
-export const url = (slug, s) => `/${slug}/flower/${encodeURIComponent(s.id)}/`;
+// 網址用花名，不用內部代號。代號是主檔裡「記錄數最多那一列」借來的，
+// 補照片或改錯字都會讓它換人，網址就跟著死掉。花名才是這份資料真正的主鍵。
+export const url = (slug, s) => `/${slug}/flower/${encodeURIComponent(s.n)}/`;

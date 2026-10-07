@@ -505,8 +505,11 @@ for cn, g in groups.items():
         last = max(str(last), o['last'])
         years |= {int(o['last'][:4])}
     has_pin = any(r['id'] in pins for r in g)
-    st = rep['fix'] or (fixes[0] if fixes else '') or \
-        ('現存' if (str(last) >= CUTOFF or has_pin) else '近年未見')
+    # 同一種花有好幾列時，只要還有一列是「現存」，整種就算現存——
+    # 不能因為其中一株標了「近年未見」就把整種拉下來，那會害它的地圖編號查不到
+    auto = '現存' if (str(last) >= CUTOFF or has_pin) else '近年未見'
+    RANK = {'現存': 3, '近年未見': 2, '已不在': 1}
+    st = max([r['fix'] or auto for r in g] or [auto], key=lambda x: RANK.get(x, 0))
     onmap = st == '現存' and cn not in MAPX
 
     def key(x):
@@ -647,6 +650,46 @@ gone = sorted(set(old) - set(new)); add = sorted(set(new) - set(old))
 chg = [(n, old[n]['st'], new[n]['st']) for n in new if n in old and old[n]['st'] != new[n]['st']]
 
 json.dump(out, open(SP, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+
+# ---------- 6c. 舊網址導向 ----------
+# 網頁網址從「內部代號」改成「花名」之後，所有舊網址都要 301 導過去，
+# 不然 Google 和別人存的連結會變 404。
+#
+# 代號本來就會換人：同一種花在主檔有好幾列時，網頁用的是記錄數最多那一列的代號，
+# 你補一張照片就可能換成另一列。所以這份對照表是「累積」的——
+# 代號進去就不再拿掉，就算你之後把那一列從主檔刪了，舊網址還是導得到。
+HIST = os.path.join(DATA, '舊網址.csv')
+hist = {}
+if os.path.exists(HIST):
+    for r in csv.DictReader(open(HIST, encoding='utf-8-sig')):
+        if r.get('內部代號') and r.get('花名'):
+            hist[r['內部代號']] = r['花名']
+
+for r in rows:                       # 主檔每一列的代號，都可能曾經是網址
+    hist[r['id']] = canon(r['n'])
+for x in out:                        # 這一輪真正用到的代號（含觀測記錄新配的）
+    hist[x['id']] = x['n']
+
+alive = {x['n'] for x in out}
+hist = {c: n for c, n in hist.items() if n in alive}   # 花整個沒了就讓它 404，不亂導
+
+with open(HIST, 'w', newline='', encoding='utf-8-sig') as f:
+    w = csv.writer(f); w.writerow(['內部代號', '花名'])
+    for c in sorted(hist):
+        w.writerow([c, hist[c]])
+
+RD = os.path.join(ROOT, 'public', '_redirects')
+lines = ['# 這個檔是 tools/update.py 產的，不要手改。',
+         '# 舊的「內部代號」網址 301 導到現在的「花名」網址。']
+for c in sorted(hist):
+    lines.append(f'/{SLUG}/flower/{c}/  /{SLUG}/flower/{hist[c]}/  301')
+os.makedirs(os.path.dirname(RD), exist_ok=True)
+open(RD, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+say()
+say(f'舊網址導向 {len(hist)} 條，寫到 public/_redirects')
+if len(hist) > 1900:
+    say('　⚠️ Cloudflare 的上限是 2000 條，快滿了，跟我說一聲要換做法。')
+
 cnt_st = collections.Counter(x['st'] for x in out)
 say()
 say(f'物種 {len(out)} 種　{dict(cnt_st)}　排除 {len(dropped)} 種')

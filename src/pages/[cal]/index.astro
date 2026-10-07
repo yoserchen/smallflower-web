@@ -16,7 +16,7 @@ const onMap = new Set(sp.flatMap((s) => s.no || [])).size;
 const nf = (n) => n.toLocaleString('en-US');
 const mini = live.slice().sort(byNo).map((s) => {
   const p = photosOf(cal.slug, s);
-  return [s.id, s.n, s.m, s.no[0] || '', s.z, s.i, p && p.ph.length ? p.s : ''];
+  return [s.n, s.n, s.m, s.no[0] || '', s.z, s.i, p && p.ph.length ? p.s : ''];
 });
 ---
 <Base cal={cal} description={`${cal.intro}共 ${live.length.toLocaleString()} 種。`}>

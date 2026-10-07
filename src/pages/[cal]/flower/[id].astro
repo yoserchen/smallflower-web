@@ -5,7 +5,8 @@ import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf, zo
 import { MONTHS, AUTHOR } from '../../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.flatMap((c) =>
-    speciesOf(c.slug).map((s) => ({ params: { cal: c.slug, id: s.id }, props: { cal: c, s } }))
+    // 網址用花名（見 lib.mjs 的 url()）。參數名還叫 id 是為了不動檔名。
+    speciesOf(c.slug).map((s) => ({ params: { cal: c.slug, id: s.n }, props: { cal: c, s } }))
   );
 }
 const { cal, s } = Astro.props;

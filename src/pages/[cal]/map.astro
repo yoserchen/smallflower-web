@@ -7,7 +7,7 @@ export function getStaticPaths() {
 }
 const { cal } = Astro.props;
 const idx = {};
-speciesOf(cal.slug).forEach((s) => s.no.forEach((n) => { idx[n] = [s.id, s.n]; }));
+speciesOf(cal.slug).forEach((s) => s.no.forEach((n) => { idx[n] = s.n; }));
 const cnt = {};
 Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] || 0) + 1; });
 const total = Object.keys(idx).length;
@@ -92,13 +92,13 @@ const total = Object.keys(idx).length;
       var k = norm(n.value.trim());
       if (!k) { r.textContent = TIP; return; }
       var h = I[k];
-      if (h) r.innerHTML = '<a href="/' + SLUG + '/flower/' + encodeURIComponent(h[0]) + '/">' + k + '　' + h[1] + '</a>';
+      if (h) r.innerHTML = '<a href="/' + SLUG + '/flower/' + encodeURIComponent(h) + '/">' + k + '　' + h + '</a>';
       else r.textContent = '找不到 ' + k + '，請確認張號和號碼。';
     }
     n.addEventListener('input', go);
     document.getElementById('f').addEventListener('submit', function () {
       var h = I[norm(n.value.trim())];
-      if (h) location.href = '/' + SLUG + '/flower/' + encodeURIComponent(h[0]) + '/';
+      if (h) location.href = '/' + SLUG + '/flower/' + encodeURIComponent(h) + '/';
     });
     var p = new URLSearchParams(location.search).get('n');
     if (p) { n.value = p; go(); }
