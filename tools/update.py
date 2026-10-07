@@ -27,6 +27,7 @@
     npm run build && git add -A && git commit -m "更新" && git push
 """
 import os, sys, csv, json, glob, re, shutil, subprocess, collections, datetime, time
+import urllib.parse
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -679,10 +680,13 @@ with open(HIST, 'w', newline='', encoding='utf-8-sig') as f:
         w.writerow([c, hist[c]])
 
 RD = os.path.join(ROOT, 'public', '_redirects')
+# 路徑一定要寫成編碼後的樣子（竹-29 → %E7%AB%B9-29）。
+# Cloudflare 是拿瀏覽器送來的原始路徑去比對的，寫中文原字對不上，驗證過。
+enc = lambda s: urllib.parse.quote(s, safe='')
 lines = ['# 這個檔是 tools/update.py 產的，不要手改。',
          '# 舊的「內部代號」網址 301 導到現在的「花名」網址。']
 for c in sorted(hist):
-    lines.append(f'/{SLUG}/flower/{c}/  /{SLUG}/flower/{hist[c]}/  301')
+    lines.append(f'/{SLUG}/flower/{enc(c)}/  /{SLUG}/flower/{enc(hist[c])}/  301')
 os.makedirs(os.path.dirname(RD), exist_ok=True)
 open(RD, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
 say()
