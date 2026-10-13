@@ -163,7 +163,13 @@ if os.path.isdir(EXTRA):
         if nm not in names:
             print(f'  ! 補充照片的花名對不到主檔，略過：{nm}')
             return
-        part = PARTS.get(os.path.splitext(os.path.basename(path))[0], '')
+        # 鍵是「花名/檔名」（檔名會重複）。舊版的小抄只有檔名，所以留一個退路。
+        # 同名照片歸檔時會加 _1、_2，查不到就把那個尾巴去掉再試一次。
+        stem = os.path.splitext(os.path.basename(path))[0]
+        bare = re.sub(r'_\d+$', '', stem)
+        part = (PARTS.get(nm + '/' + stem.lower())
+                or PARTS.get(nm + '/' + bare.lower())
+                or PARTS.get(stem) or '')
         idx.setdefault(nm, {})[path] = {'ts': shot_time(path),
                                         'album': '自己補的' + (f'・{part}' if part else ''),
                                         'own': not part, 'part': part}
@@ -180,6 +186,36 @@ if os.path.isdir(EXTRA):
 else:
     os.makedirs(EXTRA, exist_ok=True)
     print(f'（可以把自己的照片放到 {EXTRA}）')
+
+# --- 同一張照片收到兩次就只留一張 ---
+# 自己補進 照片/ 的，有一天也可能出現在 FB 匯出裡（同一張貼過 FB）。
+# 檔案路徑不一樣，但內容一樣，所以用「檔案大小＋前 64KB 的指紋」認同一張，
+# 自己補的那一份留著（有標註部位、畫質也是原檔），FB 那一份丟掉。
+def sig(path):
+    try:
+        with open(path, 'rb') as fh:
+            return (os.path.getsize(path), hashlib.md5(fh.read(65536)).hexdigest())
+    except Exception:
+        return (0, path)
+
+
+n_dup = 0
+for nm, photos in idx.items():
+    best = {}
+    for path, meta in list(photos.items()):
+        s = sig(path)
+        if s in best:
+            n_dup += 1
+            keep_new = bool(meta.get('own') or meta.get('part'))
+            old = photos[best[s]]
+            if keep_new and not (old.get('own') or old.get('part')):
+                del photos[best[s]]; best[s] = path      # 換成自己補的那一份
+            else:
+                del photos[path]
+        else:
+            best[s] = path
+if n_dup:
+    print(f'同一張照片收到兩次的 {n_dup} 張，已經只留一份')
 
 total = sum(len(v) for v in idx.values())
 print(f'對到 {len(idx)} 種花、{total} 張照片')

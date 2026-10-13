@@ -27,7 +27,7 @@
     npm run build && git add -A && git commit -m "更新" && git push
 """
 import os, sys, csv, json, glob, re, shutil, subprocess, collections, datetime, time
-import urllib.parse
+import hashlib, urllib.parse
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -115,10 +115,67 @@ def canon(n):
 OBS_CSV = os.path.join(DATA, '觀測記錄.csv')
 OBS_COLS = ['花名', '日期', '區域', '檔名', '部位', '緯度', '經度']
 obs_rows = list(csv.DictReader(open(OBS_CSV, encoding='utf-8-sig'))) if os.path.exists(OBS_CSV) else []
-seen_files = {r['檔名'] for r in obs_rows}
 PHOTO_DIR = os.path.join(IN, '照片')
 PENDING = os.path.join(IN, '待標註')
-added = 0
+# 認「檔名＋拍攝日期」，不要只認檔名。
+# iPhone 的編號會繞回去重用：IMG_9840 可能是四月的蔓綠絨，也可能是十月的普萊氏月桃。
+# 以前只比檔名，後來那一張整筆被丟掉、照片留在「待標註」裡，而且不出聲。
+by_key = {(r['檔名'], r['日期']): r for r in obs_rows}
+
+
+def find_photo(fn, *dirs):
+    """照檔名（不管副檔名大小寫）在這幾個資料夾裡找那張照片"""
+    base = os.path.splitext(fn)[0].lower()
+    for dd in dirs:
+        if not dd or not os.path.isdir(dd):
+            continue
+        for f in os.listdir(dd):
+            if os.path.splitext(f)[0].lower() == base:
+                return os.path.join(dd, f)
+    return None
+
+
+def same_file(a, b):
+    try:
+        if os.path.getsize(a) != os.path.getsize(b):
+            return False
+        return (hashlib.md5(open(a, 'rb').read(65536)).digest()
+                == hashlib.md5(open(b, 'rb').read(65536)).digest())
+    except Exception:
+        return False
+
+
+def file_photo(src, nm):
+    """把照片歸到該花的資料夾，之後就跟自己補的照片一樣處理"""
+    if not src or not os.path.exists(src):
+        return
+    dst = os.path.join(PHOTO_DIR, canon(nm))
+    os.makedirs(dst, exist_ok=True)
+    tgt = os.path.join(dst, os.path.basename(src))
+    if os.path.abspath(src) == os.path.abspath(tgt):
+        return
+    # 相機的編號每一萬張繞回來一次，同一株花過幾年會再出現同一個檔名。
+    # 真的是同一張就不用搬，不是的話在後面加日期，不要把舊的蓋掉。
+    if os.path.exists(tgt):
+        if same_file(src, tgt):
+            os.remove(src); return
+        stem, ext = os.path.splitext(os.path.basename(src))
+        for k in range(1, 100):
+            alt = os.path.join(dst, f'{stem}_{k}{ext}')
+            if not os.path.exists(alt):
+                tgt = alt; break
+            if same_file(src, alt):
+                os.remove(src); return
+        say(f'　{os.path.basename(src)} 在「{canon(nm)}」已經有同名的舊照片，'
+            f'這一張存成 {os.path.basename(tgt)}')
+    try:
+        shutil.move(src, tgt)
+    except Exception as e:
+        say(f'  ! 搬不動 {os.path.basename(src)}：{e}')
+
+
+added = dup = 0
+relabel, no_info = [], []
 for jf in sorted(glob.glob(os.path.join(IN, '新增記錄*.json'))):
     try:
         got = json.load(open(jf, encoding='utf-8'))
@@ -126,40 +183,62 @@ for jf in sorted(glob.glob(os.path.join(IN, '新增記錄*.json'))):
         say(f'  ! 讀不了 {os.path.basename(jf)}：{e}'); continue
     for r in got.get('records', []):
         nm, d, z, fn = r.get('n', '').strip(), r.get('d', ''), r.get('z', '').strip(), r.get('f', '')
-        if not nm or not d or fn in seen_files:
+        part = (r.get('t') or '花').strip() or '花'
+        if not nm or not d:
+            no_info.append((fn or '（沒有檔名）', nm or '（沒打花名）', d or '（沒有日期）'))
             continue
-        obs_rows.append({'花名': nm, '日期': d, '區域': z, '檔名': fn,
-                         '部位': (r.get('t') or '花').strip() or '花',
-                         '緯度': r.get('lat', ''), '經度': r.get('lon', '')})
-        seen_files.add(fn); added += 1
-        # 把照片搬到該花的資料夾，之後就跟自己補的照片一樣處理
-        base = os.path.splitext(fn)[0]
-        src = next((os.path.join(PENDING, f) for f in (os.listdir(PENDING) if os.path.isdir(PENDING) else [])
-                    if os.path.splitext(f)[0] == base), None)
-        if src and os.path.exists(src):
-            dst = os.path.join(PHOTO_DIR, canon(nm))
-            os.makedirs(dst, exist_ok=True)
-            try:
-                shutil.move(src, os.path.join(dst, os.path.basename(src)))
-            except Exception as e:
-                say(f'  ! 搬不動 {os.path.basename(src)}：{e}')
+        old = by_key.get((fn, d))
+        if old is not None:
+            if old['花名'] == nm and (old.get('部位') or '花') == part:
+                dup += 1                      # 同一張照片重複匯出，跳過就好
+                continue
+            # 同一張照片改了花名或部位＝你重新標註過，以最新這一次為準
+            was = old['花名']
+            relabel.append((fn, was, old.get('部位') or '花', nm, part))
+            old.update({'花名': nm, '區域': z or old.get('區域', ''), '部位': part})
+            if was != nm:
+                file_photo(find_photo(fn, PENDING, os.path.join(PHOTO_DIR, canon(was))), nm)
+            continue
+        row = {'花名': nm, '日期': d, '區域': z, '檔名': fn, '部位': part,
+               '緯度': r.get('lat', ''), '經度': r.get('lon', '')}
+        obs_rows.append(row); by_key[(fn, d)] = row; added += 1
+        file_photo(find_photo(fn, PENDING), nm)
     os.makedirs(os.path.join(DATA, '已匯入'), exist_ok=True)
     shutil.move(jf, os.path.join(DATA, '已匯入',
                 datetime.datetime.now().strftime('%Y%m%d_%H%M%S_') + os.path.basename(jf)))
-if added:
+if relabel:
+    say(f'重新標註 {len(relabel)} 筆（以最新的為準）：')
+    for fn, a, pa, b, pb in relabel[:20]:
+        say(f'　{fn}　{a}（{pa}）→ {b}（{pb}）')
+if no_info:
+    say(f'　! 這 {len(no_info)} 筆沒有花名或日期，沒收進來，照片留在「待標註」：')
+    for fn, nm, d in no_info[:20]:
+        say(f'　  {fn}　花名 {nm}　日期 {d}')
+if dup:
+    say(f'　（{dup} 筆是同一張照片重複匯出，跳過）')
+if added or relabel:
     with open(OBS_CSV, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=OBS_COLS); w.writeheader(); w.writerows(obs_rows)
-    say(f'新記錄 {added} 筆已收進觀測記錄')
+    if added:
+        say(f'新記錄 {added} 筆已收進觀測記錄')
 if obs_rows:
     nf = sum(1 for r in obs_rows if (r.get('部位') or '花') != '花')
     say(f'觀測記錄累計 {len(obs_rows)} 筆' + (f'（其中 {nf} 筆非花，不算開花月份）' if nf else ''))
     # 給 build_photos.py 看的小抄：這些檔名不是花，挑照片時不要優先
     os.makedirs(PHOTO_DIR, exist_ok=True)
-    # 用去掉副檔名的檔名當鍵：標註工具記的是 .jpg，歸檔的可能還是 .HEIC
-    json.dump({os.path.splitext(r['檔名'])[0]: r['部位'] for r in obs_rows
-               if r.get('檔名') and (r.get('部位') or '花') != '花'},
+    # 鍵是「花名/檔名」：副檔名去掉（標註工具記的是 .jpg，歸檔的可能還是 .HEIC），
+    # 前面加花名是因為檔名會重複——IMG_9840 這一張是別種花的植株照，
+    # 不加花名就會把另一種花的開花照也當成非花照，害它當不成代表照。
+    json.dump({canon(r['花名']) + '/' + os.path.splitext(r['檔名'])[0].lower(): r['部位']
+               for r in obs_rows if r.get('檔名') and (r.get('部位') or '花') != '花'},
               open(os.path.join(PHOTO_DIR, '.部位.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, indent=0)
+    # 跑完還留在「待標註」的，就是這一輪沒收進來的，講清楚免得你以為都進去了
+    left = [f for f in sorted(os.listdir(PENDING))
+            if not f.startswith('.')] if os.path.isdir(PENDING) else []
+    if left:
+        say(f'　「待標註」還留著 {len(left)} 個檔案（沒有對應的新記錄）：'
+            + '、'.join(left[:12]) + ('…' if len(left) > 12 else ''))
 
 # 整理成「花名 -> 月份、筆數、最後拍到、區域」
 obs = {}
