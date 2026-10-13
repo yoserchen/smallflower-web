@@ -457,52 +457,8 @@ if loose:
     say(f'　圖釘編號表：{len(remembered)} 筆（{PIN_CSV}）')
 
 # ---------- 4. 溫室 / 蘭房 ----------
-indoor = {}
-OSM = os.path.join(DATA, 'map.osm')
-if os.path.exists(OSM) and pins:
-    osm = ET.parse(OSM).getroot()
-    N = {n.get('id'): (float(n.get('lat')), float(n.get('lon'))) for n in osm.findall('node')}
-    W = {w.get('id'): [N[x.get('ref')] for x in w.findall('nd') if x.get('ref') in N]
-         for w in osm.findall('way')}
-
-    def tags(e):
-        return {x.get('k'): x.get('v') for x in e.findall('tag')}
-
-    def rings(rel):
-        segs = [W[m.get('ref')][:] for m in rel.findall('member')
-                if m.get('type') == 'way' and m.get('role') in ('outer', '') and m.get('ref') in W]
-        out = []
-        while segs:
-            ring = segs.pop(0); ch = True
-            while ch and ring and ring[0] != ring[-1]:
-                ch = False
-                for i, s in enumerate(segs):
-                    if s and s[0] == ring[-1]:
-                        ring += s[1:]; segs.pop(i); ch = True; break
-                    if s and s[-1] == ring[-1]:
-                        ring += s[::-1][1:]; segs.pop(i); ch = True; break
-            out.append(ring)
-        return out
-
-    lanfang = [W[w.get('id')] for w in osm.findall('way') if tags(w).get('name') == '蘭房']
-    big = [g for rel in osm.findall('relation') if tags(rel).get('building') == 'roof'
-           for g in rings(rel) if len(g) > 3]
-
-    def inside(p, poly):
-        y, x = p; c = False
-        for i in range(len(poly)):
-            y1, x1 = poly[i]; y2, x2 = poly[(i + 1) % len(poly)]
-            if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
-                c = not c
-        return c
-
-    for code, qs in pins.items():
-        for q in qs:
-            lab = '蘭房' if any(inside(q, g) for g in lanfang) else (
-                  '溫室' if any(inside(q, g) for g in big) else None)
-            if lab:
-                indoor.setdefault(code, set()).add(lab)
-    say(f'　室內：溫室/蘭房共 {len(indoor)} 個代號')
+# 不用算了：溫室／蘭房／多肉溫室看主檔的「室內」欄，
+# 跟 make_map.py 同一個來源。（以前是拿 map.osm 的建物多邊形套疊，會誤判）
 
 # ---------- 5. 印刷編號 ----------
 pnum = {}
@@ -543,6 +499,7 @@ for r in it:
                      years=g(r, '拍到年份'), c=g(r, '記錄數', 0) or 0,
                      zone=ZONE_RENAME.get(z, z), parts=g(r, '記錄部位'),
                      up=str(g(r, '上地圖')).strip() != '否',
+                     inn=str(g(r, '室內')).strip() if '室內' in col else '',
                      note=str(g(r, NOTE_COL)).strip() if NOTE_COL else ''))
 n_off = sum(1 for r in rows if not r['up'])
 say(f'主檔 {len(rows)} 列' + (f'，其中 {n_off} 列「上地圖」是否，不給地圖編號' if n_off else ''))
@@ -574,7 +531,10 @@ for cn, g in groups.items():
             parts |= set(str(r['parts']).split('、'))
         if r['up']:
             nos += pnum.get(r['id'], [])
-        ind |= indoor.get(r['id'], set())
+        # 室內（溫室／蘭房／多肉溫室）一律看主檔那一欄。
+        # 以前是拿地圖的點去跟 OSM 的建物多邊形做套疊，結果有的花在屋簷邊緣被誤判，
+        # 多肉溫室更是整個認不出來，網站和紙本地圖因此對不起來。
+        ind |= {x.strip() for x in re.split(r'[、,，]', r.get('inn') or '') if x.strip()}
         if r['id'] in pins:
             pass
     o = obs.get(cn)
