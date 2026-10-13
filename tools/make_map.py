@@ -887,7 +887,9 @@ def draw_index(c, sheet, F):
         c.setFillColorRGB(*INK); c.setFont(F['bold'], 8.5)
         c.drawString(*P(x, ytop + 4), f"第 {sheet['no']} 張　{sheet['name']}")
         c.setFillColorRGB(*LEAF); c.setFont(F['body'], 5.2)
-        c.drawString(*P(x, ytop + 8.6), '方框＝找到就打勾　小格＝開花月份，一月到十二月'
+        # 「，一月到十二月」拿掉了：第 1、2 張還要接室內標記的說明，
+        # 加起來會頂到欄外、靠近裁切線。小格本來就是左到右十二格，不必寫。
+        c.drawString(*P(x, ytop + 8.6), '方框＝找到就打勾　小格＝開花月份'
                      + ('　' + '、'.join(f'{t}＝{v}內' for t, v in legend) if tagged else ''))
         c.setStrokeColorRGB(*MIST); c.setLineWidth(.25 * MM)
         c.line(*P(x, ytop + 10.6), *P(x + cw - IM * 2, ytop + 10.6))
