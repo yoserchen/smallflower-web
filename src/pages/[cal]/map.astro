@@ -13,7 +13,7 @@ Object.keys(idx).forEach((n) => { const k = n.split('-')[0]; cnt[k] = (cnt[k] ||
 const total = Object.keys(idx).length;
 ---
 <Base title={`${cal.place}找花地圖`} cal={cal} current="map"
-      image="/map/preview.png" imageAlt={`${cal.place}找花地圖的一角：荷花池周邊，每一株花一個編號`}
+      image="/map/preview.jpg" imageAlt={`在${cal.place}荷花池邊攤開找花地圖，圖上的藍就是眼前這片池`}
       description={`${cal.place}找花地圖：把每一株花標在紙上，配一個編號。手上有地圖的話，在這裡輸入編號就能查到那是什麼花。`}>
   <section>
     <h1>{cal.place}找花地圖</h1>
@@ -21,9 +21,10 @@ const total = Object.keys(idx).length;
       {total.toLocaleString('en-US')} 株花標在圖上，每一株一個編號——不必先認得它，也查得到它叫什麼。</p>
 
     <figure class="peek">
-      <img src="/map/preview.png" width="1400" height="875" loading="lazy" decoding="async"
-           alt={`找花地圖的一角：${cal.place}荷花池周邊，每一株花標一個編號`} />
-      <figcaption>地圖的一角——荷花池周邊。每一個點是一株花，旁邊的號碼對照背面的花名。</figcaption>
+      <img src="/map/preview.jpg" width="1400" height="1431" loading="lazy" decoding="async"
+           alt={`在${cal.place}荷花池邊攤開第 3 張地圖，圖上的藍色水域就是眼前這片荷花池`} />
+      <figcaption>在荷花池邊攤開第 3 張。圖上那塊藍就是眼前這片池，
+        每一個點是一株花，旁邊的號碼對照背面的花名。</figcaption>
     </figure>
 
     <div class="steps">
@@ -56,7 +57,7 @@ const total = Object.keys(idx).length;
         <div class="sh"><b>第 {k} 張</b><span>{v}</span><small>{cnt[k] || 0} 株</small></div>
       ))}
     </div>
-    <p class="note">這份地圖目前印刷製作中。</p>
+    <p class="note">2026 年 10 月第一版已經印好了。</p>
 
     <div class="warn">
       <b>小提醒</b>
@@ -70,7 +71,7 @@ const total = Object.keys(idx).length;
     <div class="get">
       <h2>想要一份</h2>
       <p>這份地圖不做販售，也不會在其他地方流通。印刷和寄送都是{AUTHOR}自己出的，
-        只留給贊助 1000 元的朋友，地圖出版時親送或寄送給您。</p>
+        只留給贊助 1000 元的朋友。第一版已經印好，確認之後就親送或寄給您。</p>
       <a class="btn solid" href={SPONSOR_1000_URL} target="_blank" rel="noopener">我要取得一份找花地圖</a>
       <p class="hint">也可以先看看<a href="/support/">其他支持方式</a>。</p>
     </div>
