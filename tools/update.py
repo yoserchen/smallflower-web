@@ -117,10 +117,23 @@ OBS_COLS = ['花名', '日期', '區域', '檔名', '部位', '緯度', '經度'
 obs_rows = list(csv.DictReader(open(OBS_CSV, encoding='utf-8-sig'))) if os.path.exists(OBS_CSV) else []
 PHOTO_DIR = os.path.join(IN, '照片')
 PENDING = os.path.join(IN, '待標註')
+WAIT_DIR = os.path.join(IN, '待查名稱')          # 還沒查到花名的照片先放這裡
+WAIT_CSV = os.path.join(IN, '待查名稱.csv')
+waiting = {}
+if os.path.exists(WAIT_CSV):
+    for r in csv.DictReader(open(WAIT_CSV, encoding='utf-8-sig')):
+        if r.get('檔名'):
+            waiting[os.path.splitext(r['檔名'])[0]] = r
 # 認「檔名＋拍攝日期」，不要只認檔名。
 # iPhone 的編號會繞回去重用：IMG_9840 可能是四月的蔓綠絨，也可能是十月的普萊氏月桃。
 # 以前只比檔名，後來那一張整筆被丟掉、照片留在「待標註」裡，而且不出聲。
-by_key = {(r['檔名'], r['日期']): r for r in obs_rows}
+# 鍵用「去掉副檔名的檔名（轉小寫）＋拍攝日期」：
+# 標註工具記的是 IMG_9840.jpg，實際歸檔的可能是 IMG_9840.HEIC，指的是同一張。
+def rkey(fn, d):
+    return (os.path.splitext(fn or '')[0].lower(), d or '')
+
+
+by_key = {rkey(r['檔名'], r['日期']): r for r in obs_rows}
 
 
 def find_photo(fn, *dirs):
@@ -187,7 +200,7 @@ for jf in sorted(glob.glob(os.path.join(IN, '新增記錄*.json'))):
         if not nm or not d:
             no_info.append((fn or '（沒有檔名）', nm or '（沒打花名）', d or '（沒有日期）'))
             continue
-        old = by_key.get((fn, d))
+        old = by_key.get(rkey(fn, d))
         if old is not None:
             if old['花名'] == nm and (old.get('部位') or '花') == part:
                 dup += 1                      # 同一張照片重複匯出，跳過就好
@@ -197,12 +210,32 @@ for jf in sorted(glob.glob(os.path.join(IN, '新增記錄*.json'))):
             relabel.append((fn, was, old.get('部位') or '花', nm, part))
             old.update({'花名': nm, '區域': z or old.get('區域', ''), '部位': part})
             if was != nm:
-                file_photo(find_photo(fn, PENDING, os.path.join(PHOTO_DIR, canon(was))), nm)
+                file_photo(find_photo(fn, PENDING, WAIT_DIR, os.path.join(PHOTO_DIR, canon(was))), nm)
+            waiting.pop(os.path.splitext(fn)[0], None)
             continue
         row = {'花名': nm, '日期': d, '區域': z, '檔名': fn, '部位': part,
                '緯度': r.get('lat', ''), '經度': r.get('lon', '')}
-        obs_rows.append(row); by_key[(fn, d)] = row; added += 1
-        file_photo(find_photo(fn, PENDING), nm)
+        obs_rows.append(row); by_key[rkey(fn, d)] = row; added += 1
+        file_photo(find_photo(fn, PENDING, WAIT_DIR), nm)
+        waiting.pop(os.path.splitext(fn)[0], None)
+    # 還沒查到名字的：收進「待查名稱」，不留在待標註裡礙事，也不會被忘記。
+    # 下次跑 label.py 它們會一起出現，查到了直接標上去就好。
+    for r in got.get('pending', []):
+        fn, d = r.get('f', ''), r.get('d', '')
+        if not fn:
+            continue
+        src = find_photo(fn, PENDING, WAIT_DIR)
+        if src:
+            os.makedirs(WAIT_DIR, exist_ok=True)
+            tgt = os.path.join(WAIT_DIR, os.path.basename(src))
+            if os.path.abspath(src) != os.path.abspath(tgt):
+                try:
+                    shutil.move(src, tgt)
+                except Exception as e:
+                    say(f'  ! 搬不動 {os.path.basename(src)}：{e}')
+        waiting[os.path.splitext(fn)[0]] = {
+            '檔名': fn, '拍攝日期': d, '可能的區域': r.get('z', ''),
+            '緯度': r.get('lat', ''), '經度': r.get('lon', '')}
     os.makedirs(os.path.join(DATA, '已匯入'), exist_ok=True)
     shutil.move(jf, os.path.join(DATA, '已匯入',
                 datetime.datetime.now().strftime('%Y%m%d_%H%M%S_') + os.path.basename(jf)))
@@ -216,7 +249,55 @@ if no_info:
         say(f'　  {fn}　花名 {nm}　日期 {d}')
 if dup:
     say(f'　（{dup} 筆是同一張照片重複匯出，跳過）')
-if added or relabel:
+
+# ---------- 2c. 整種花改名 ----------
+# 放一份「改花名.csv」（兩欄：原花名、改成）到 花曆更新/，
+# 觀測記錄裡那一種花的每一筆都會改掉，照片資料夾也跟著搬。
+# 主檔裡的花名要自己在 Google 試算表改，這裡改的是觀測記錄這一側。
+RENAME_CSV = os.path.join(IN, '改花名.csv')
+renamed = 0
+if os.path.exists(RENAME_CSV):
+    ren = {}
+    for r in csv.DictReader(open(RENAME_CSV, encoding='utf-8-sig')):
+        a = (r.get('原花名') or '').strip()
+        b = (r.get('改成') or '').strip()
+        if a and b and a != b:
+            ren[a] = b
+    for row in obs_rows:
+        if row['花名'] in ren:
+            row['花名'] = ren[row['花名']]; renamed += 1
+    for a, b in ren.items():
+        src = os.path.join(PHOTO_DIR, a)
+        if os.path.isdir(src):
+            for f in sorted(os.listdir(src)):
+                if not f.startswith('.'):
+                    file_photo(os.path.join(src, f), b)
+            try:
+                os.rmdir(src)
+            except OSError:
+                pass
+    if ren:
+        say(f'改花名 {len(ren)} 種、觀測記錄 {renamed} 筆：')
+        for a, b in list(ren.items())[:20]:
+            say(f'　{a} → {b}')
+        say('　（主檔那邊的花名記得自己在 Google 試算表一起改）')
+        os.makedirs(os.path.join(DATA, '已匯入'), exist_ok=True)
+        shutil.move(RENAME_CSV, os.path.join(DATA, '已匯入',
+                    datetime.datetime.now().strftime('%Y%m%d_%H%M%S_改花名.csv')))
+
+# 待查名稱的清單：有人查到名字就會自動從這裡消失
+WCOLS = ['檔名', '拍攝日期', '可能的區域', '緯度', '經度']
+if waiting:
+    with open(WAIT_CSV, 'w', encoding='utf-8-sig', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=WCOLS, extrasaction='ignore')
+        w.writeheader()
+        for k in sorted(waiting):
+            w.writerow(waiting[k])
+    say(f'還沒查到花名的 {len(waiting)} 張，照片收在「待查名稱/」，清單寫到 待查名稱.csv')
+    say('　（下次跑 label.py 它們會一起出現，查到名字直接標上去就好）')
+elif os.path.exists(WAIT_CSV):
+    os.remove(WAIT_CSV)
+if added or relabel or renamed:
     with open(OBS_CSV, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=OBS_COLS); w.writeheader(); w.writerows(obs_rows)
     if added:

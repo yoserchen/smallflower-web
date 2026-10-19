@@ -67,7 +67,15 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
 .cell[data-x] img{filter:grayscale(1);opacity:.3}
 .cell[data-x] .x{background:var(--bloom)}
 .cell[data-x] .dt::after{content:"　不使用"}
-@media (hover:none){.cell .x{opacity:1}}
+.cell .ren{position:absolute;top:6px;left:6px;padding:2px 8px;border-radius:999px;
+  background:rgba(0,0,0,.45);color:#fff;font-size:11px;line-height:18px;
+  opacity:0;transition:opacity .12s}
+.cell:hover .ren,.cell:focus-within .ren{opacity:1}
+.cell .ren:hover{background:var(--bloom)}
+.cell .fx{position:absolute;top:30px;left:6px;padding:2px 8px;border-radius:999px;
+  background:var(--bloom);color:#fff;font-size:11px;line-height:18px;max-width:86%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (hover:none){.cell .x,.cell .ren{opacity:1}}
 .cell .dt{position:absolute;left:0;right:0;bottom:0;font-size:11px;color:#fff;padding:12px 6px 4px;
   background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .hint{color:var(--leaf);font-size:13px;margin:16px 0 0;line-height:1.7}
@@ -119,9 +127,12 @@ h1{font-family:var(--serif);font-size:30px;margin:0 0 2px}
 <script>
 const DATA = __DATA__;
 const AUTO = DATA.current, SP = DATA.species;
-const KEY = 'huali-picks-v2', BKEY = 'huali-bans-v1';
+const KEY = 'huali-picks-v2', BKEY = 'huali-bans-v1', FKEY = 'huali-fixes-v1';
 let picks = {};
 try { picks = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { picks = {}; }
+// 標錯花名的訂正：檔名 -> { f, d, n, t }
+let fixes = {};
+try { fixes = JSON.parse(localStorage.getItem(FKEY) || '{}'); } catch (e) { fixes = {}; }
 // 「不要用」的照片。第一次打開時，從上一次匯出後重建的索引帶進來。
 let bans = null;
 try { bans = JSON.parse(localStorage.getItem(BKEY)); } catch (e) { bans = null; }
@@ -151,6 +162,7 @@ const save = () => {
   try {
     localStorage.setItem(KEY, JSON.stringify(picks));
     localStorage.setItem(BKEY, JSON.stringify(bans));
+    localStorage.setItem(FKEY, JSON.stringify(fixes));
   } catch (e) {}
 };
 
@@ -200,12 +212,28 @@ function drawMain() {
       '.jpg" alt="" /><span class="b">' + (i >= 0 && i > 0 ? i + 1 : '') +
       '</span><span class="x" role="button" title="這張不要用">' + (xd ? '↩' : '✕') +
       '</span><span class="dt">' + (p.d || '') + '</span>'
-      + (p.w ? '<span class="w">新</span>' : '');
+      + (p.w ? '<span class="w">新</span>' : '')
+      + (p.f ? '<span class="ren" role="button" title="這張的花名標錯了">改名</span>' : '')
+      + (fixes[p.f] ? '<span class="fx">→ ' + fixes[p.f].n + '</span>' : '');
     c.onclick = () => toggle(p.k);
     c.querySelector('.x').onclick = (e) => { e.stopPropagation(); toggleBan(p.k); };
+    const rb = c.querySelector('.ren');
+    if (rb) rb.onclick = (e) => { e.stopPropagation(); rename(p); };
     f.appendChild(c);
   }
   $('g').replaceChildren(f);
+}
+// 這一張的花名當初標錯了。改完匯出「新增記錄_訂正.json」，
+// update.py 看到同一張照片換了花名，會把記錄改掉、照片也搬到新的花那邊。
+function rename(p) {
+  const v = prompt('這張照片現在歸在「' + cur + '」。\n' +
+                   '要改成哪一種花？（留白＝取消這次的訂正）',
+                   (fixes[p.f] && fixes[p.f].n) || cur);
+  if (v === null) return;
+  const n = v.trim();
+  if (!n || n === cur) delete fixes[p.f];
+  else fixes[p.f] = { f: p.f, d: p.d || '', n: n, t: p.t || '花' };
+  save(); drawMain(); drawList();
 }
 function toggleBan(k) {
   const b = ban(cur).slice(), i = b.indexOf(k);
@@ -247,6 +275,21 @@ $('exp').onclick = () => {
   a.download = 'photo_picks.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  // 有改過花名的話，另外下載一份訂正檔，跟 新增記錄.json 放同一個地方
+  const fx = Object.values(fixes).filter((r) => r && r.f && r.d && r.n);
+  if (!fx.length) return;
+  setTimeout(() => {
+    const b2 = new Blob([JSON.stringify({ batch: 'fix', records: fx }, null, 1)],
+                        { type: 'application/json' });
+    const a2 = document.createElement('a');
+    a2.href = URL.createObjectURL(b2);
+    a2.download = '新增記錄_訂正.json';
+    a2.click();
+    setTimeout(() => URL.revokeObjectURL(a2.href), 3000);
+    alert('另外下載了「新增記錄_訂正.json」（' + fx.length + ' 張改了花名）。\n' +
+          '兩個檔案都放到 花曆更新/ 底下，再跑 update.py。');
+    fixes = {}; save(); drawMain();
+  }, 600);
 };
 $('q').oninput = (e) => { q = e.target.value.trim(); drawList(); };
 const FIDS = ['fNew', 'fAll', 'fEd', 'fMany'];

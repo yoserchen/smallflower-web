@@ -433,6 +433,12 @@ def ph_row(nm, r):
         o['x'] = 1
     if r['k'] in fresh.get(nm, ()):
         o['w'] = 1
+    # 自己拍、走過標註工具的照片才有觀測記錄，才改得了花名。
+    # 檔名給挑片工具，它要用來產「訂正」用的記錄。
+    if str(r.get('a') or '').startswith('自己補的'):
+        o['f'] = os.path.basename(r['p'])
+        if r.get('t'):
+            o['t'] = r['t']
     return o
 
 

@@ -33,6 +33,7 @@ h1{font-family:var(--serif);font-size:20px;margin:0 16px 0 0}
 .body{padding:9px 10px 11px;display:grid;gap:6px}
 .dt{font-size:12px;color:var(--leaf);display:flex;justify-content:space-between;align-items:center}
 .badge{font-size:11px;background:var(--bloom);color:#fff;border-radius:999px;padding:1px 8px}
+.badge.wait{background:#8a8f7e}
 .gps{font-size:11px;background:var(--mist);color:var(--leaf);border-radius:999px;padding:1px 8px;margin-left:4px}
 .card.neu .gps{background:var(--leaf);color:#fff}
 input,select{font:inherit;font-size:14px;width:100%;padding:7px 9px;border:1px solid var(--mist);
@@ -97,7 +98,8 @@ function draw() {
       '<div class="body">' +
         '<span class="dt"><span>' + (p.d || '沒有日期') +
         (p.gz ? '<span class="gps">GPS ' + p.gz + '</span>' : '') + '</span>' +
-        (isNew(m.n) ? '<span class="badge">新的花</span>' : '') + '</span>' +
+        (isNew(m.n) ? '<span class="badge">新的花</span>' : '') +
+        (p.wait ? '<span class="badge wait">待查</span>' : '') + '</span>' +
         '<div class="row2">' +
           '<input list="names" placeholder="花名" data-i="' + i + '" />' +
           '<select class="part" data-i="' + i + '">' + PARTS.map(function (x) {
@@ -149,7 +151,7 @@ $('g').addEventListener('input', (e) => {
     const card = e.target.closest('.card');
     const v = e.target.value.trim();
     card.className = 'card' + (v ? (isNew(v) ? ' neu' : ' done') : '');
-    const b = card.querySelector('.badge');
+    const b = card.querySelector('.badge:not(.wait)');   // 「待查」那顆不要動到
     if (isNew(v) && !b) card.querySelector('.dt').insertAdjacentHTML('beforeend', '<span class="badge">新的花</span>');
     if (!isNew(v) && b) b.remove();
     const sel = card.querySelector('select.zone');
@@ -216,15 +218,29 @@ $('exp').onclick = () => {
     if (p.ll) { rec.lat = p.ll[0]; rec.lon = p.ll[1]; }
     out.push(rec);
   });
+  // 沒打花名、也沒標「不收錄」的＝還沒查到名字。
+  // 這些不丟掉也不卡在待標註，收進「待查名稱」資料夾，下次打開標註工具還會出現。
+  const pending = [];
+  DATA.photos.forEach((p) => {
+    const m = mark[p.f];
+    if (m && m.n) return;
+    const rec = { f: p.f, d: p.d, z: p.gz || '' };
+    if (p.ll) { rec.lat = p.ll[0]; rec.lon = p.ll[1]; }
+    pending.push(rec);
+  });
   const missing = DATA.photos.filter((p) => {
     const m = mark[p.f];
     return m && m.n && m.n !== '不收錄' && isNew(m.n) && !m.z;
   });
   if (missing.length) {
-    alert('有 ' + missing.length + ' 張新的花還沒選區域，先補上再匯出。');
-    return;
+    const names = [...new Set(missing.map((p) => mark[p.f].n))];
+    if (!confirm('有 ' + missing.length + ' 張新的花還沒選區域：\n' +
+                 names.slice(0, 8).join('、') + (names.length > 8 ? '…' : '') +
+                 '\n\n按「確定」先匯出其他的，這幾張留著下次再處理。\n' +
+                 '按「取消」回去補區域。')) return;
   }
-  const blob = new Blob([JSON.stringify({ batch: DATA.batch, records: out }, null, 1)],
+  if (!out.length && !pending.length) { alert('沒有東西可以匯出。'); return; }
+  const blob = new Blob([JSON.stringify({ batch: DATA.batch, records: out, pending: pending }, null, 1)],
                         { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

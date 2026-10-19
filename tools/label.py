@@ -38,10 +38,20 @@ if not os.path.isdir(IN):
     print('把這個月拍的照片放進去，再執行一次。')
     sys.exit(0)
 
-files = sorted(f for f in os.listdir(IN) if f.lower().endswith(EXTS) and not f.startswith('.'))
+# 上次沒查到名字的，放在「待查名稱」裡，每次都一起叫出來，查到了就順手標掉
+WAIT = os.path.expanduser('~/Documents/花曆更新/待查名稱')
+
+
+def scan(d):
+    return sorted(f for f in os.listdir(d)
+                  if f.lower().endswith(EXTS) and not f.startswith('.')) if os.path.isdir(d) else []
+
+
+files = [(IN, f, False) for f in scan(IN)] + [(WAIT, f, True) for f in scan(WAIT)]
 if not files:
     print(f'{IN} 裡沒有照片。'); sys.exit(0)
-print(f'找到 {len(files)} 張照片')
+n_wait = sum(1 for _, _, w in files if w)
+print(f'找到 {len(files)} 張照片' + (f'（其中 {n_wait} 張是上次還沒查到名字的）' if n_wait else ''))
 
 # ---------- 既有的花名與區域 ----------
 species = json.load(open(os.path.join(ROOT, 'src/data', SLUG + '.json'), encoding='utf-8'))
@@ -149,8 +159,8 @@ for d in (TH, FU):
     os.makedirs(d)
 
 photos = []
-for i, f in enumerate(files, 1):
-    src = os.path.join(IN, f)
+for i, (d0, f, waiting) in enumerate(files, 1):
+    src = os.path.join(d0, f)
     try:
         im = Image.open(src)
         im.draft('RGB', (1600, 1600))
@@ -165,6 +175,8 @@ for i, f in enumerate(files, 1):
     big.save(os.path.join(FU, name), 'JPEG', quality=80, optimize=True)
     t = shot_time(src)
     rec = {'f': name, 'src': f, 'd': t.strftime('%Y-%m-%d')}
+    if waiting:
+        rec['wait'] = 1
     ll = gps(src)
     if ll:
         rec['ll'] = ll
