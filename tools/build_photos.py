@@ -135,6 +135,7 @@ for f in (sorted(glob.glob(os.path.join(FB, 'posts/album/*.json'))) if FB else [
 
 # ---------- 1b. 自己補的照片 ----------
 n_extra = 0
+skipped = {}        # 花名 -> 沒收進來的檔名，最後統一報告
 if os.path.isdir(EXTRA):
     def shot_time(path):
         """優先用 EXIF 的拍攝時間，沒有才用檔案時間。"""
@@ -161,7 +162,9 @@ if os.path.isdir(EXTRA):
         global n_extra
         nm = alias.get(nm, nm)
         if nm not in names:
-            print(f'  ! 補充照片的花名對不到主檔，略過：{nm}')
+            # 主檔沒有這種花，或主檔把它標成「不收錄」。
+            # 收起來最後一次講清楚——以前一張印一行，夾在幾百行裡根本看不到。
+            skipped.setdefault(nm, []).append(os.path.basename(path))
             return
         # 鍵是「花名/檔名」（檔名會重複）。舊版的小抄只有檔名，所以留一個退路。
         # 同名照片歸檔時會加 _1、_2，查不到就把那個尾巴去掉再試一次。
@@ -478,6 +481,19 @@ with open(os.path.join(PICKER, '挑片.html'), 'w', encoding='utf-8') as fh:
     fh.write(html)
 
 print(f'挑片工具寫到 {PICKER}/挑片.html（{len(pick_idx)} 種）')
+
+if skipped:
+    n = sum(len(v) for v in skipped.values())
+    print()
+    print(f'★ 有 {n} 張照片沒有收進來，因為主檔裡沒有這 {len(skipped)} 種花，'
+          '或是把它標成了「不收錄」：')
+    for nm in sorted(skipped):
+        fs = skipped[nm]
+        print(f'    {nm}　{len(fs)} 張　（照片在 花曆更新/照片/{nm}/：'
+              + '、'.join(fs[:3]) + ('…' if len(fs) > 3 else '') + '）')
+    print('  要讓它出現在挑片工具和網站上，去主檔把那一列的「狀態修正」清掉或改成「現存」，')
+    print('  主檔完全沒有這種花的話，先把花名和區域加進去，再跑一次 update.py。')
+
 if len(sys.argv) <= 2:
     print('\n完成。接著執行：')
     print('  npm run build && git add -A && git commit -m "加上照片" && git push')
