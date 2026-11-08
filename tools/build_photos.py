@@ -351,15 +351,22 @@ os.makedirs(PUB)
 
 meta_out = {}
 nfiles = 0
+lost_picks = []
 t0 = time.time()
 for nm, info in sorted(scored.items()):
     rows = info['all']
     if not rows:
         continue
     if nm in manual:
+        # 你挑過的就照你挑的，一張不多一張不少、順序照舊。
+        # 以前少數幾張對不到就默默往前遞補，等於你挑的被程式改掉了。
         want = manual[nm]
-        chosen = [r for k in want for r in rows if r['k'] == k][:N_PICK]
-        if not chosen:
+        by_k = {r['k']: r for r in rows}
+        chosen = [by_k[k] for k in want if k in by_k][:N_PICK]
+        lost = [k for k in want if k not in by_k]
+        if lost:
+            lost_picks.append((nm, len(lost), len(chosen)))
+        if not chosen:                 # 真的一張都找不到了才退回自動挑選
             chosen = auto_pick(rows)
     else:
         chosen = auto_pick(rows)
@@ -372,12 +379,15 @@ for nm, info in sorted(scored.items()):
             im = ImageOps.exif_transpose(im).convert('RGB')
         except Exception:
             continue
+        # 檔名帶上這張照片的固定編號。以前叫 1.jpg、2.jpg，換了照片網址卻一樣，
+        # 瀏覽器和 Cloudflare 就繼續給舊圖；帶了編號，換照片＝換網址，一定看得到新的。
+        v = r['k']
         big = im.copy()
         big.thumbnail((1280, 1280), Image.LANCZOS)
-        big.save(f'{d}/{i}.jpg', 'JPEG', quality=78, optimize=True, progressive=True)
+        big.save(f'{d}/{i}-{v}.jpg', 'JPEG', quality=78, optimize=True, progressive=True)
         th = ImageOps.fit(im, (480, 480), Image.LANCZOS, centering=(.5, .45))
-        th.save(f'{d}/{i}t.jpg', 'JPEG', quality=72, optimize=True)
-        it = {'i': i, 'd': r['d'], 'a': r['a']}
+        th.save(f'{d}/{i}-{v}t.jpg', 'JPEG', quality=72, optimize=True)
+        it = {'i': i, 'v': v, 'd': r['d'], 'a': r['a']}
         if r.get('t'):
             it['t'] = r['t']          # 網站上會在照片角落標「植株」「果」
         items.append(it)
@@ -392,6 +402,11 @@ json.dump(meta_out, open(os.path.join(ROOT, 'src/photos', SLUG + '.json'), 'w', 
 size = sum(os.path.getsize(os.path.join(dp, f))
            for dp, _, fs in os.walk(PUB) for f in fs)
 print(f'網站圖完成：{len(meta_out)} 種、{nfiles} 個檔案、{size/1e6:.0f} MB、{time.time()-t0:.0f} 秒')
+if lost_picks:
+    print(f'  ! 這 {len(lost_picks)} 種你挑的照片有找不到的（檔案被刪掉或換了位置），'
+          '沒有自動補別張，請重挑：')
+    for nm, n, keep in lost_picks[:20]:
+        print(f'    {nm}　少了 {n} 張' + (f'，還剩 {keep} 張' if keep else '，全部不見，暫時用自動挑選'))
 
 # ---------- 5. 挑片工具索引 ----------
 # 這一批新加的照片是哪些：跟上次跑完存下來的清單比對。

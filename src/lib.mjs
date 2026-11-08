@@ -19,9 +19,12 @@ export const zoneMapUrl = (slug, z) => {
 };
 
 export const photosOf = (slug, s) => (PHOTOS[slug] || {})[s.n] || null;
+// 照片檔名帶的版本（換照片＝換網址，才不會被快取擋住）。舊資料沒有 v 就退回舊檔名。
+export const pv = (x) => (x && x.v ? `${x.i}-${x.v}` : `${x && x.i}`);
+
 export const coverOf = (slug, s) => {
   const p = photosOf(slug, s);
-  return p && p.ph.length ? `/p/${p.s}/${p.ph[0].i}t.jpg` : null;
+  return p && p.ph.length ? `/p/${p.s}/${pv(p.ph[0])}t.jpg` : null;
 };
 
 export const calFor = (slug) => CALENDARS.find((c) => c.slug === slug);

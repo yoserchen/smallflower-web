@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import Row from '../../../components/Row.astro';
-import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf, zoneMapUrl } from '../../../lib.mjs';
+import { LIVE_CALENDARS, speciesOf, liveOf, monthsOf, yearsOf, has, photosOf, zoneMapUrl, pv } from '../../../lib.mjs';
 import { MONTHS, AUTHOR } from '../../../config.mjs';
 export function getStaticPaths() {
   return LIVE_CALENDARS.flatMap((c) =>
@@ -13,7 +13,7 @@ const { cal, s } = Astro.props;
 const ms = monthsOf(s), ys = yearsOf(s);
 const pics = photosOf(cal.slug, s);
 const zoneUrl = zoneMapUrl(cal.slug, s.z);
-const share = pics && pics.ph.length ? `/p/${pics.s}/${pics.ph[0].i}.jpg` : '/og.jpg';
+const share = pics && pics.ph.length ? `/p/${pics.s}/${pv(pics.ph[0])}.jpg` : '/og.jpg';
 const sheets = [...new Set(s.no.map((n) => n.split('-')[0]))];
 const nearby = liveOf(cal.slug).filter((x) => x.z && x.z === s.z && x.id !== s.id && ms.some((m) => has(x, m))).slice(0, 8);
 const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''}拍到開花${s.z ? '，位於' + s.z : ''}。`;
@@ -30,11 +30,11 @@ const desc = `${s.n}：在${cal.place}${ms.length ? ms.join('、') + ' 月' : ''
     {pics ? (
       <figure class="gal" data-n={pics.ph.length} id="gal">
         {pics.ph.map((p, k) => (
-          <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${p.i}.jpg`}
-             data-k={k} data-full={`/p/${pics.s}/${p.i}.jpg`}
+          <a class={k === 0 ? 'big' : ''} href={`/p/${pics.s}/${pv(p)}.jpg`}
+             data-k={k} data-full={`/p/${pics.s}/${pv(p)}.jpg`}
              data-date={(p.d ? p.d.replace('-', ' 年 ').replace('-', ' 月 ') + ' 日' : '')
                         + (p.t ? '　' + p.t : '')}>
-            <img src={`/p/${pics.s}/${p.i}${k === 0 ? '' : 't'}.jpg`}
+            <img src={`/p/${pics.s}/${pv(p)}${k === 0 ? '' : 't'}.jpg`}
                  alt={`${s.n}${p.t ? '的' + p.t : ''}　${p.d}`}
                  loading={k === 0 ? 'eager' : 'lazy'} decoding="async" />
             {p.t && <span class="part">{p.t}</span>}
