@@ -1,31 +1,181 @@
 ---
 import Base from '../layouts/Base.astro';
-import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
-import { BRAND, AUTHOR, GOATCOUNTER } from '../config.mjs';
+import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
+import { AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
+
+const nf = (n) => n.toLocaleString('en-US');
 const cards = LIVE_CALENDARS.map((c) => ({ ...c, n: liveOf(c.slug).length }));
 const total = cards.reduce((a, c) => a + c.n, 0);
-const nf = (n) => n.toLocaleString('en-US');
+const pins = new Set();
+LIVE_CALENDARS.forEach((c) => speciesOf(c.slug).forEach((s) => (s.no || []).forEach((n) => pins.add(c.slug + n))));
+
+// ── 圖片：檔案放進 public/ 之後，把下面的 null 改成路徑就會自動換掉佔位框 ──
+const PORTRAIT = '/me.jpg';
+const YT_SHOT  = '/yt.jpg';
+const FB_SHOT  = '/fb.jpg';
+
+const stats = [
+  { n: '1,000+', t: '次走進植物園' },
+  { n: nf(total), t: '種花的開花記錄' },
+  { n: '50+', t: '場拍花導覽' },
+  { n: '3', t: '本書' },
+];
+
+const channels = [
+  { t: '小花視界', d: 'YouTube 頻道。台北植物園各區的拍花導覽影片。',
+    href: YOUTUBE_URL, shot: YT_SHOT, need: 'YouTube 頻道頁截圖' },
+  { t: 'FB 粉絲專頁', d: '每天分享當天拍到的花和昆蟲，也有每週花況。',
+    href: FB_URL, shot: FB_SHOT, need: 'FB 粉絲專頁截圖' },
+];
+
+// 服務詢問表單（圖片授權、帶拍、創作、演講都走這一張）
+const ASK_URL = 'https://forms.gle/PeFp28jTdcqNnXLB6';
+
+// cover：書封圖路徑；order：紙本訂購表單；sold：紙本完售；ebook：讀墨電子書
+const books = [
+  { t: '花精靈', cover: encodeURI('/book-花精靈.jpg'),
+    order: 'https://forms.gle/DqChHSygWE8e1DDk8',
+    ebook: 'https://readmoo.com/book/210501281000101',
+    d: '結合花、攝影與故事創作，收錄近兩百科、一百九十二種花卉的分科紀錄。' },
+  { t: '路', cover: encodeURI('/book-路.JPG'),
+    order: 'https://forms.gle/gT8CmyPsb83sFazb9',
+    ebook: 'https://readmoo.com/book/210500479000101',
+    d: '記錄前後將近五十年的求學、工作與生活，以錄音機的播放形式編排。' },
+  { t: '媽媽的味道', cover: encodeURI('/book-媽媽的味道.jpg'), order: null, sold: true,
+    ebook: 'https://readmoo.com/book/210501240000101',
+    d: '前篇記下媽媽的四十多道菜，後篇寫媽媽的生活。' },
+];
+
+const works = [
+  { ic: 'license', t: '圖片授權',
+    d: '數萬張台北植物園的花卉照片，可供出版、媒體、設計與教學使用。' },
+  { ic: 'camera', t: '植物園團體帶拍',
+    d: '帶著你的相機或手機走一趟，從找花、認花到拍花。已經辦過五十幾場。' },
+  { ic: 'bloom', t: '個人化花卉創作',
+    d: '把拍到的花做成相片書、明信片，或其他影音作品。' },
+  { ic: 'mic', t: '演講',
+    d: '講題：生活在花的世界裡。' },
+];
 ---
-<Base description={`${AUTHOR}實地記錄的花曆，每一種花什麼時候開、開在哪裡。目前收錄 ${nf(total)} 種。`}>
-  <section class="top">
-    <h1>{BRAND}</h1>
-    <p class="lead">每一種花什麼時候開、開在哪裡，都是實地一株一株拍下來記的。目前收錄 {nf(total)} 種。</p>
-  </section>
-  <section>
-    <div class="cards">
-      {cards.map((c) => (
-        <a class="card" href={`/${c.slug}/`}>
-          <b>{c.name}</b>
-          <p>{c.blurb}</p>
-          <span>{nf(c.n)} 種{c.hasMap && '　附找花地圖'}</span>
-        </a>
-      ))}
-      <div class="card soon">
-        <b>還有更多</b>
-        <p>更多地點的花曆記錄正在整理，之後會陸續加進來。</p>
-      </div>
+<Base description={`${AUTHOR}：台北植物園的花曆記錄、找花地圖、拍花導覽與圖片授權。目前收錄 ${nf(total)} 種花。`}>
+  <section class="hero">
+    <div class="port">
+      {PORTRAIT
+        ? <img src={PORTRAIT} alt={AUTHOR} width="360" height="360" fetchpriority="high" />
+        : <div class="ph sq"><span>大頭照<br /><small>方形，800×800 以上</small></span></div>}
+    </div>
+    <div class="htxt">
+      <h1>{AUTHOR}</h1>
+      <p class="lead">在花的世界裡徜徉，欣賞大自然的美好，把自己的創意加進生活中，呈現出花朵的美，以及各種可能。</p>
+      <ul class="stats">
+        {stats.map((s) => <li><b>{s.n}</b><span>{s.t}</span></li>)}
+      </ul>
     </div>
   </section>
+
+  <section class="main">
+    {cards.map((c, i) => (
+      <a class={'cal' + (i === 0 ? ' big' : '')} href={`/${c.slug}/`}>
+        <b>{c.name}</b>
+        <p>{c.blurb}</p>
+        <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+      </a>
+    ))}
+    {cards[0] && (
+      <p class="jump">
+        <a href={`/${cards[0].slug}/month/`}>依月份看</a>
+        <a href={`/${cards[0].slug}/map/`}>找花地圖</a>
+        <a href={`/${cards[0].slug}/passport/`}>拍花護照</a>
+      </p>
+    )}
+  </section>
+
+  <section class="chan">
+    <div class="two">
+      {channels.filter((c) => c.href).map((c) => (
+        <a class="ch" href={c.href} rel="noopener" target="_blank">
+          <div class="shot">
+            {c.shot
+              ? <img src={c.shot} alt={c.t} width="640" height="360" loading="lazy" decoding="async" />
+              : <div class="ph wide"><span>{c.need}<br /><small>建議 1280×720</small></span></div>}
+          </div>
+          <b>{c.t}</b>
+          <span>{c.d}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>{AUTHOR}的書</h2>
+    <div class="three">
+      {books.map((b) => (
+        <div class="bk">
+          <div class="cv">
+            {b.cover
+              ? <img src={b.cover} alt={`《${b.t}》書封`} width="400" height="560" loading="lazy" decoding="async" />
+              : <div class="ph tall"><span>《{b.t}》書封<br /><small>直式，建議 800×1120</small></span></div>}
+          </div>
+          <b>{b.t}</b>
+          <span class="bd">{b.d}</span>
+          <p class="buy">
+            {b.order
+              ? <a class="btn solid sm" href={b.order} rel="noopener" target="_blank">訂購紙本書</a>
+              : <span class="btn sm" aria-disabled="true">{b.sold ? '紙本已完售' : '訂購連結待補'}</span>}
+            <a class="eb" href={b.ebook} rel="noopener" target="_blank">讀墨電子書 →</a>
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="work">
+    <h2>找{AUTHOR}</h2>
+    <p class="sub">花曆和網站永遠免費公開。下面這些是{AUTHOR}的時間和照片，屬於付費的項目。</p>
+    <ul class="jobs">
+      {works.map((w) => (
+        <li>
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none"
+                 stroke="currentColor" stroke-width="1.7"
+                 stroke-linecap="round" stroke-linejoin="round">
+              {w.ic === 'license' && (
+                <><rect x="3" y="4" width="18" height="13" rx="2" />
+                  <path d="M3 14l4.5-4.5L12 14l3-3 6 6" /><circle cx="8.5" cy="8.5" r="1.3" />
+                  <path d="M7 20h10" /></>
+              )}
+              {w.ic === 'camera' && (
+                <><path d="M3 8.5A1.5 1.5 0 014.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z" />
+                  <circle cx="12" cy="13" r="3.6" /></>
+              )}
+              {w.ic === 'bloom' && (
+                <><circle cx="12" cy="9" r="2.2" />
+                  <path d="M12 6.8c0-2 1-3.3 2.6-3.3 1.2 0 2 .9 2 2 0 1.6-1.6 2.6-3.4 2.9" />
+                  <path d="M12 6.8c0-2-1-3.3-2.6-3.3-1.2 0-2 .9-2 2 0 1.6 1.6 2.6 3.4 2.9" />
+                  <path d="M13.9 10.4c1.8-.7 3.5-.2 4 1.3.4 1.1-.2 2.2-1.3 2.5-1.5.5-3-.7-3.8-2.3" />
+                  <path d="M10.1 10.4c-1.8-.7-3.5-.2-4 1.3-.4 1.1.2 2.2 1.3 2.5 1.5.5 3-.7 3.8-2.3" />
+                  <path d="M12 13v8" /></>
+              )}
+              {w.ic === 'mic' && (
+                <><rect x="9" y="2.5" width="6" height="11" rx="3" />
+                  <path d="M5.5 11a6.5 6.5 0 0013 0" /><path d="M12 17.5V21" /><path d="M8.5 21h7" /></>
+              )}
+            </svg>
+          </span>
+          <div>
+            <b>{w.t}</b>
+            <span>{w.d}</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <p class="cta">
+      <a class="btn solid" href={ASK_URL} rel="noopener" target="_blank">填服務詢問單</a>
+      <span>以上任何一項，填一張表單就可以，{AUTHOR}會親自回覆。</span>
+    </p>
+    <p class="other">{AUTHOR}同時也是故事引導師，開立故事整理與故事溝通相關課程，可以到 <a href="https://timestory.tw" rel="noopener" target="_blank">時立方</a>看更多資訊。</p>
+  </section>
+
   {GOATCOUNTER && (
     <>
       <p class="views" id="views" hidden>網站累計造訪 <b id="vn">—</b> 人次</p>
@@ -46,15 +196,78 @@ const nf = (n) => n.toLocaleString('en-US');
   )}
 </Base>
 <style>
-.top{padding:56px 0 8px}
-.views{text-align:center;color:var(--leaf);font-size:14px;margin:8px 0 40px}
+/* 還沒有圖的地方用虛線框佔位，檔案補上去就會自動換掉 */
+.ph{border:2px dashed var(--mist);border-radius:14px;display:grid;place-items:center;
+  text-align:center;color:var(--leaf);font-size:13.5px;line-height:1.6;background:var(--panel)}
+.ph small{font-size:12px;opacity:.75}
+.ph.sq{aspect-ratio:1/1;border-radius:20px}
+.ph.wide{aspect-ratio:16/9}
+.ph.tall{aspect-ratio:5/7}
+
+.hero{padding:44px 0 8px;display:grid;grid-template-columns:180px minmax(0,1fr);gap:28px;align-items:start}
+.port img{width:180px;height:180px;object-fit:cover;border-radius:20px;display:block;background:var(--mist)}
+.port .ph.sq{width:180px}
+.htxt h1{margin-top:2px}
+.hero .lead{font-size:18px;max-width:34em;line-height:1.9}
+.stats{list-style:none;display:flex;flex-wrap:wrap;gap:8px 32px;padding:0;margin:20px 0 0}
+.stats li{display:grid;gap:1px}
+.stats b{font-family:var(--serif);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stats span{font-size:13.5px;color:var(--leaf)}
+
+.main{padding-top:26px}
+.cal{display:block;padding:24px;border:1px solid var(--mist);border-radius:18px;
+  background:var(--panel);color:var(--ink);text-decoration:none}
+.cal + .cal{margin-top:12px}
+.cal:hover{border-color:var(--bloom)}
+.cal.big{padding:30px 28px;border-color:var(--bloom)}
+.cal b{font-family:var(--serif);font-size:24px;display:block}
+.cal.big b{font-size:30px}
+.cal p{margin:8px 0 14px;font-size:15px;max-width:34em}
+.cal .n{font-size:14px;color:var(--bloom);font-weight:700}
+.jump{display:flex;flex-wrap:wrap;gap:10px 18px;margin:14px 2px 0;font-size:15px}
+
+.chan{padding-top:30px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.ch{display:grid;gap:6px;color:var(--ink);text-decoration:none}
+.ch .shot img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:14px;
+  display:block;background:var(--mist);border:1px solid var(--mist)}
+.ch b{font-family:var(--serif);font-size:20px;margin-top:4px}
+.ch span{font-size:14px;color:var(--leaf);line-height:1.75}
+.ch:hover b{color:var(--bloom)}
+
+.books{padding-top:34px;border-top:1px solid var(--mist);margin-top:34px}
+.books .three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:14px}
+.bk{display:grid;gap:5px;align-content:start}
+.bk .cv img{width:100%;height:auto;aspect-ratio:5/7;object-fit:cover;border-radius:10px;display:block;
+  background:var(--mist);border:1px solid var(--mist)}
+.bk b{font-family:var(--serif);font-size:20px;margin-top:6px}
+.bk .bd{font-size:14px;color:var(--leaf);line-height:1.75}
+.buy{display:grid;gap:8px;justify-items:start;margin:10px 0 0}
+.btn.sm{font-size:14px;padding:7px 14px}
+.eb{font-size:14px}
+
+.work{border-top:1px solid var(--mist);margin-top:36px;padding-top:28px}
+.jobs{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:16px;max-width:44em}
+.jobs li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:start}
+.ic{width:40px;height:40px;border-radius:50%;border:1px solid var(--mist);background:var(--panel);
+  display:grid;place-items:center;color:var(--bloom)}
+.jobs b{font-family:var(--serif);font-size:19px;display:block}
+.jobs div span{font-size:15px;color:var(--leaf);line-height:1.8}   /* 只管說明文字，別蓋到 .ic */
+.cta{margin:24px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.cta .btn{display:inline-block;text-decoration:none;white-space:nowrap}
+.cta span{font-size:14px;color:var(--leaf)}
+.other{margin:22px 0 0;font-size:15px;line-height:1.85;max-width:40em}
+
+.views{text-align:center;color:var(--leaf);font-size:14px;margin:30px 0 20px}
 .views b{color:var(--ink);font-variant-numeric:tabular-nums}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.card{display:block;padding:24px;border:1px solid var(--mist);border-radius:18px;background:var(--panel);color:var(--ink);text-decoration:none}
-.card b{font-family:var(--serif);font-size:24px;display:block}
-.card p{margin:8px 0 14px;font-size:15px}
-.card span{font-size:14px;color:var(--bloom);font-weight:700}
-.card:hover{border-color:var(--bloom)}
-.card.soon{background:transparent;border-style:dashed}
-.card.soon b,.card.soon p{color:var(--leaf)}
+
+@media (max-width:620px){
+  .hero{grid-template-columns:1fr;gap:18px;padding-top:30px}
+  .port img,.port .ph.sq{width:140px}
+  .port .ph.sq{aspect-ratio:1/1}
+  .hero .lead{font-size:16.5px}
+  .stats{gap:14px 24px}
+  .stats b{font-size:23px}
+  .cal.big b{font-size:25px}
+}
 </style>
