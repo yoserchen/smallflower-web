@@ -14,10 +14,12 @@ const PORTRAIT = '/me.jpg';
 const YT_SHOT  = '/yt.jpg';
 const FB_SHOT  = '/fb.jpg';
 
+// 這裡是「小花老師」個人的數字。植物園的 1,340 種寫在下面花曆那張卡片裡，不要混在一起。
 const stats = [
   { n: '1,000+', t: '次走進植物園' },
-  { n: nf(total), t: '種花的開花記錄' },
+  { n: '2,500+', t: '種不同的花' },
   { n: '50+', t: '場拍花導覽' },
+  { n: '90+', t: '部影片' },
   { n: '3', t: '本書' },
 ];
 
@@ -26,6 +28,23 @@ const channels = [
     href: YOUTUBE_URL, shot: YT_SHOT, need: 'YouTube 頻道頁截圖' },
   { t: 'FB 粉絲專頁', d: '每天分享當天拍到的花和昆蟲，也有每週花況。',
     href: FB_URL, shot: FB_SHOT, need: 'FB 粉絲專頁截圖' },
+];
+
+// 花鐘：和 logo 同一套圖形（十二片花瓣，十二／四／六／八月上色）。
+// 花瓣長短沿用 logo 的比例，不要改，改了就和網站的標誌對不上。
+const PETALS = [
+  [0,   'M0,-11.0 C11.6,-28.4 8.1,-64.4 0,-69.1 C-8.1,-64.4 -11.6,-28.4 0,-11.0 Z', 1],
+  [30,  'M0,-11.0 C11.5,-28.2 8.1,-63.6 0,-68.2 C-8.1,-63.6 -11.5,-28.2 0,-11.0 Z', 0],
+  [60,  'M0,-11.0 C11.9,-29.1 8.3,-66.5 0,-71.4 C-8.3,-66.5 -11.9,-29.1 0,-11.0 Z', 0],
+  [90,  'M0,-11.0 C13.4,-33.1 9.4,-78.8 0,-84.7 C-9.4,-78.8 -13.4,-33.1 0,-11.0 Z', 0],
+  [120, 'M0,-11.0 C13.8,-34.3 9.7,-82.4 0,-88.6 C-9.7,-82.4 -13.8,-34.3 0,-11.0 Z', 1],
+  [150, 'M0,-11.0 C14.0,-34.7 9.8,-83.7 0,-90.0 C-9.8,-83.7 -14.0,-34.7 0,-11.0 Z', 0],
+  [180, 'M0,-11.0 C13.4,-33.1 9.4,-78.7 0,-84.6 C-9.4,-78.7 -13.4,-33.1 0,-11.0 Z', 1],
+  [210, 'M0,-11.0 C12.6,-30.9 8.8,-72.1 0,-77.4 C-8.8,-72.1 -12.6,-30.9 0,-11.0 Z', 0],
+  [240, 'M0,-11.0 C12.6,-30.9 8.8,-72.0 0,-77.3 C-8.8,-72.0 -12.6,-30.9 0,-11.0 Z', 1],
+  [270, 'M0,-11.0 C12.2,-30.0 8.5,-69.2 0,-74.2 C-8.5,-69.2 -12.2,-30.0 0,-11.0 Z', 0],
+  [300, 'M0,-11.0 C11.9,-29.3 8.4,-67.0 0,-71.9 C-8.4,-67.0 -11.9,-29.3 0,-11.0 Z', 0],
+  [330, 'M0,-11.0 C12.0,-29.4 8.4,-67.3 0,-72.2 C-8.4,-67.3 -12.0,-29.4 0,-11.0 Z', 0],
 ];
 
 // 服務詢問表單（圖片授權、帶拍、創作、演講都走這一張）
@@ -43,7 +62,7 @@ const books = [
     d: '記錄前後將近五十年的求學、工作與生活，以錄音機的播放形式編排。' },
   { t: '媽媽的味道', cover: encodeURI('/book-媽媽的味道.jpg'), order: null, sold: true,
     ebook: 'https://readmoo.com/book/210501240000101',
-    d: '前篇記下媽媽的四十多道菜，後篇寫媽媽的生活。' },
+    d: '與媽媽對話的紀錄，前篇記下媽媽的四十多道菜，後篇寫媽媽的生活。' },
 ];
 
 const works = [
@@ -76,9 +95,18 @@ const works = [
   <section class="main">
     {cards.map((c, i) => (
       <a class={'cal' + (i === 0 ? ' big' : '')} href={`/${c.slug}/`}>
-        <b>{c.name}</b>
-        <p>{c.blurb}</p>
-        <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+        <span class="ct">
+          <b>{c.name}</b>
+          <p>{c.blurb}</p>
+          <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+        </span>
+        {i === 0 && (
+          <svg class="bloom" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+            {PETALS.map(([a, d, on]) => (
+              <path d={d} transform={`translate(100,100) rotate(${a})`} class={on ? 'on' : ''} />
+            ))}
+          </svg>
+        )}
       </a>
     ))}
     {cards[0] && (
@@ -220,6 +248,13 @@ const works = [
 .cal + .cal{margin-top:12px}
 .cal:hover{border-color:var(--bloom)}
 .cal.big{padding:30px 28px;border-color:var(--bloom)}
+.cal.big{display:grid;grid-template-columns:minmax(0,1fr) 168px;gap:26px;align-items:center}
+.cal .ct{display:block;min-width:0}
+.bloom{width:100%;height:auto;display:block}
+.bloom path{fill:var(--mist);stroke:var(--panel);stroke-width:1.6;transition:fill .25s}
+.bloom path.on{fill:var(--bloom)}
+.cal.big:hover .bloom path{fill:var(--bloom);opacity:.45}
+.cal.big:hover .bloom path.on{opacity:1}
 .cal b{font-family:var(--serif);font-size:24px;display:block}
 .cal.big b{font-size:30px}
 .cal p{margin:8px 0 14px;font-size:15px;max-width:34em}
@@ -237,11 +272,12 @@ const works = [
 
 .books{padding-top:34px;border-top:1px solid var(--mist);margin-top:34px}
 .books .three{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:14px}
-.bk{display:grid;gap:5px;align-content:start}
+/* flex＋.bd flex:1：說明文字長短不一時，下面的按鈕還是會對齊 */
+.bk{display:flex;flex-direction:column;gap:5px}
 .bk .cv img{width:100%;height:auto;aspect-ratio:5/7;object-fit:cover;border-radius:10px;display:block;
   background:var(--mist);border:1px solid var(--mist)}
 .bk b{font-family:var(--serif);font-size:20px;margin-top:6px}
-.bk .bd{font-size:14px;color:var(--leaf);line-height:1.75}
+.bk .bd{font-size:14px;color:var(--leaf);line-height:1.75;flex:1}
 .buy{display:grid;gap:8px;justify-items:start;margin:10px 0 0}
 .btn.sm{font-size:14px;padding:7px 14px}
 .eb{font-size:14px}
@@ -266,8 +302,12 @@ const works = [
   .port img,.port .ph.sq{width:140px}
   .port .ph.sq{aspect-ratio:1/1}
   .hero .lead{font-size:16.5px}
-  .stats{gap:14px 24px}
+  /* 手機排成三欄（3＋2），比自動換行成 4＋1、最後一個落單整齊 */
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 10px}
   .stats b{font-size:23px}
   .cal.big b{font-size:25px}
+  /* 手機放不下兩欄，花鐘改成放在文字下面置中 */
+  .cal.big{grid-template-columns:1fr;gap:20px}
+  .bloom{max-width:150px;margin:0 auto}
 }
 </style>
