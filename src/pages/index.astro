@@ -73,7 +73,7 @@ const works = [
   { ic: 'bloom', t: '個人化花卉創作',
     d: '把拍到的花做成相片書、明信片，或其他影音作品。' },
   { ic: 'mic', t: '演講',
-    d: '講題：生活在花的世界裡。' },
+    d: '講題：生活在花的世界裡——談花卉攝影、退休安排、與生活創意。' },
 ];
 ---
 <Base description={`${AUTHOR}：台北植物園的花曆記錄、找花地圖、拍花導覽與圖片授權。目前收錄 ${nf(total)} 種花。`}>
@@ -85,21 +85,16 @@ const works = [
     </div>
     <div class="htxt">
       <h1>{AUTHOR}</h1>
-      <p class="lead">在花的世界裡徜徉，欣賞大自然的美好，把自己的創意加進生活中，呈現出花朵的美，以及各種可能。</p>
+      <p class="lead">在花的世界裡徜徉，欣賞大自然的美好，把創意加進生活中，呈現出花朵的美，以及各種可能。</p>
       <ul class="stats">
         {stats.map((s) => <li><b>{s.n}</b><span>{s.t}</span></li>)}
       </ul>
     </div>
   </section>
 
-  <section class="main">
+  <section class="main band">
     {cards.map((c, i) => (
       <a class={'cal' + (i === 0 ? ' big' : '')} href={`/${c.slug}/`}>
-        <span class="ct">
-          <b>{c.name}</b>
-          <p>{c.blurb}</p>
-          <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
-        </span>
         {i === 0 && (
           <svg class="bloom" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
             {PETALS.map(([a, d, on]) => (
@@ -107,6 +102,11 @@ const works = [
             ))}
           </svg>
         )}
+        <span class="ct">
+          <b>{c.name}</b>
+          <p>{c.blurb}</p>
+          <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+        </span>
       </a>
     ))}
     {cards[0] && (
@@ -134,7 +134,7 @@ const works = [
     </div>
   </section>
 
-  <section class="books">
+  <section class="books band">
     <h2>{AUTHOR}的書</h2>
     <div class="three">
       {books.map((b) => (
@@ -206,7 +206,7 @@ const works = [
 
   {GOATCOUNTER && (
     <>
-      <p class="views" id="views" hidden>網站累計造訪 <b id="vn">—</b> 人次</p>
+      <p class="views" id="views" hidden><span>網站累計造訪 <b id="vn">—</b> 人次</span></p>
       <script is:inline set:html={`
       (function(){
         var base = 'https://${GOATCOUNTER}.goatcounter.com/counter/TOTAL.json';
@@ -248,7 +248,7 @@ const works = [
 .cal + .cal{margin-top:12px}
 .cal:hover{border-color:var(--bloom)}
 .cal.big{padding:30px 28px;border-color:var(--bloom)}
-.cal.big{display:grid;grid-template-columns:minmax(0,1fr) 168px;gap:26px;align-items:center}
+.cal.big{display:grid;grid-template-columns:168px minmax(0,1fr);gap:28px;align-items:center}
 .cal .ct{display:block;min-width:0}
 .bloom{width:100%;height:auto;display:block}
 .bloom path{fill:var(--mist);stroke:var(--panel);stroke-width:1.6;transition:fill .25s}
@@ -294,8 +294,19 @@ const works = [
 .cta span{font-size:14px;color:var(--leaf)}
 .other{margin:22px 0 0;font-size:15px;line-height:1.85;max-width:40em}
 
-.views{text-align:center;color:var(--leaf);font-size:14px;margin:30px 0 20px}
+.views{text-align:center;margin:34px 0 14px}
+.views span{display:inline-block;background:var(--panel);border:1px solid var(--mist);
+  border-radius:999px;padding:7px 18px;color:var(--leaf);font-size:14px}
 .views b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* 區塊底色：::before 往左右各撐到視窗邊緣，所以色塊是整頁寬，
+   但文字還是留在 .wrap 的 1080px 裡面。html 要 overflow-x:clip，
+   不然 100vw 會算進捲軸寬度，右邊多出一條橫向捲動。 */
+:global(html){overflow-x:clip}
+.band{position:relative}
+.band::before{content:'';position:absolute;z-index:-1;top:0;bottom:0;
+  left:calc(50% - 50vw);right:calc(50% - 50vw);
+  background:color-mix(in srgb,var(--mist) 40%,var(--paper))}
 
 @media (max-width:620px){
   .hero{grid-template-columns:1fr;gap:18px;padding-top:30px}
