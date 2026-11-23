@@ -190,6 +190,45 @@ else:
     os.makedirs(EXTRA, exist_ok=True)
     print(f'（可以把自己的照片放到 {EXTRA}）')
 
+# ---------- 1c. 上次做好的網站圖，本身就是一個來源 ----------
+# FB 匯出不在了，對那一千多種花來說，上次做好的 public/p/<slug>/ 就是
+# 它們唯一剩下的照片。把這些圖收成候選照片，這份資料庫才站得住，
+# 不再靠一個幾十 GB 的外部資料夾活著。
+#
+# 兩個關鍵：
+#  1. 固定編號從檔名還原（檔名就是「第幾張-編號.jpg」），你挑過的片才對得上。
+#     編號原本是用「來源檔案路徑」算的，路徑變了編號就會變，挑選就全部失效。
+#  2. 來源是「自己補的」那些不收——那些原檔還在 花曆更新/照片/ 裡，
+#     上面已經收過一次了，再收一次會變成同一張照片出現兩次。
+PUB = os.path.join(ROOT, 'public/p')
+META = os.path.join(ROOT, 'src/photos', SLUG + '.json')
+try:
+    prev_meta = json.load(open(META, encoding='utf-8'))
+except Exception:
+    prev_meta = {}
+
+n_rec = 0
+for nm, v in prev_meta.items():
+    if nm not in names:          # 主檔已經改成不收錄或改了名，不要救回來
+        continue
+    for ph in v.get('ph', []):
+        if str(ph.get('a') or '').startswith('自己補的'):
+            continue
+        path = os.path.join(PUB, v['s'], f"{ph['i']}-{ph['v']}.jpg")
+        if not os.path.exists(path) or path in idx.get(nm, {}):
+            continue
+        try:
+            ts = int(datetime.datetime.strptime(ph['d'], '%Y-%m-%d').timestamp()) if ph.get('d') else 0
+        except Exception:
+            ts = 0
+        idx.setdefault(nm, {})[path] = {'ts': ts, 'album': ph.get('a') or '已完成的網站圖',
+                                        'rec': True, 'k': ph['v'], 'i': ph['i'],
+                                        'part': ph.get('t') or ''}
+        n_rec += 1
+if n_rec:
+    print(f'沿用上次做好的網站圖 {n_rec} 張（原檔不在了，但圖還在）')
+
+
 # --- 同一張照片收到兩次就只留一張 ---
 # 自己補進 照片/ 的，有一天也可能出現在 FB 匯出裡（同一張貼過 FB）。
 # 檔案路徑不一樣，但內容一樣，所以用「檔案大小＋前 64KB 的指紋」認同一張，
@@ -223,16 +262,18 @@ if n_dup:
 total = sum(len(v) for v in idx.values())
 print(f'對到 {len(idx)} 種花、{total} 張照片')
 
-# --- 保險：不要在找不到來源時把已經做好的照片刪掉 ---
-META = os.path.join(ROOT, 'src/photos', SLUG + '.json')
-had = len(json.load(open(META, encoding='utf-8'))) if os.path.exists(META) else 0
+had = len(prev_meta)
 if total == 0:
     print('找不到任何照片來源，維持原樣不動。')
     sys.exit(0)
-if had and len(idx) < had * 0.7 and '--force' not in sys.argv:
-    print(f'這次只對到 {len(idx)} 種，原本有 {had} 種，差太多，怕是來源資料夾沒掛好。')
-    print('已經停下來，照片維持原樣。確定要覆蓋的話在指令後面加 --force。')
-    sys.exit(2)
+# 這次完全沒有來源、連上次的圖也不在的花，沿用舊資料，不要讓它變成沒照片
+keep = {nm: v for nm, v in prev_meta.items() if nm not in idx and nm in names}
+if keep:
+    print(f'沿用上次的資料 {len(keep)} 種（連做好的圖都找不到）')
+if had and len(idx) < had * 0.7:
+    print(f'※ 這次只對到 {len(idx)} 種，上次有 {had} 種。')
+    print('  已經做好的圖不會被刪掉，但如果你不是只想補幾種花，')
+    print('  檢查一下 FB 匯出資料夾還在不在。')
 
 # ---------- 2. 評分 + 做挑片縮圖 ----------
 os.makedirs(PICKER, exist_ok=True)
@@ -249,7 +290,8 @@ for nm, photos in sorted(idx.items()):
     os.makedirs(td, exist_ok=True)
     rows = []
     for path, meta in sorted(photos.items(), key=lambda x: -x[1]['ts']):
-        k = hashlib.md5(path.encode('utf-8')).hexdigest()[:8]
+        # 沿用的圖要用原本的編號，不能用路徑重算，否則挑過的片會對不上
+        k = meta.get('k') or hashlib.md5(path.encode('utf-8')).hexdigest()[:8]
         try:
             im = Image.open(path)
             im.draft('RGB', (640, 640))          # JPEG 快速降尺寸解碼
@@ -269,11 +311,16 @@ for nm, photos in sorted(idx.items()):
         score = sharp * 1.0 + center * 0.6 + max(0, yr - 2023) * 3.0
         if meta.get('own'):
             score += 10000          # 自己補的照片一律優先
+        elif meta.get('rec') and not meta.get('part'):
+            # 上次入選的圖：排在植株／果／葉前面，但讓給自己新補的花特寫。
+            # 減 i 是為了保持上次的先後順序。
+            score += 3000 - meta.get('i', 1) * 10
         elif meta.get('part'):
             score -= 5000           # 植株／果／葉：沒有花的照片可用時才拿來頂
         tn = ImageOps.fit(im, (220, 220), Image.LANCZOS, centering=(.5, .45))
         tn.save(os.path.join(td, f'{k}.jpg'), 'JPEG', quality=58, optimize=True)
         rows.append({'k': k, 'p': path, 'ts': meta['ts'], 'a': meta['album'],
+                     'rec': meta.get('rec', False),
                      'sc': round(score, 1), 'own': bool(meta.get('own')),
                      't': meta.get('part', ''),
                      'd': datetime.date.fromtimestamp(meta['ts']).isoformat() if meta['ts'] else ''})
@@ -324,6 +371,27 @@ if any(isinstance(v, list) and v and isinstance(v[0], int) for v in manual.value
     if drop:
         print(f'  這幾種有自己補的照片，順序變了，改用自動挑選，請重新挑一次：{"、".join(drop)}')
 
+# 挑片工具只列得出「這次有來源」的花。沒被列出來的花，它在匯出檔裡的缺席
+# 不代表你取消了挑選，但程式分不出來——匯出一次就會把其餘的挑選清空。
+# 所以每次跑完存一份完整的挑選，這次沒列到的就從那裡補回來。
+PKBAK = os.path.join(ROOT, 'tools/data/挑選備份.json')
+try:
+    pk_bak = json.load(open(PKBAK, encoding='utf-8'))
+except Exception:
+    pk_bak = {}
+if not isinstance(pk_bak, dict):
+    pk_bak = {}
+restored = 0
+for nm, v in (pk_bak.get('picks') or {}).items():
+    if nm not in manual and nm not in scored:
+        manual[nm] = v
+        restored += 1
+for nm, v in (pk_bak.get('bans') or {}).items():
+    if nm not in banned and nm not in scored and v:
+        banned[nm] = set(v)
+if restored:
+    print(f'從備份補回 {restored} 種的挑選（挑片工具這次沒有列到它們）')
+
 print(f'手動指定 {len(manual)} 種')
 
 
@@ -347,12 +415,9 @@ def auto_pick(rows):
 
 
 # ---------- 4. 產生網站用圖 ----------
-PUB = os.path.join(ROOT, 'public/p')
-if os.path.isdir(PUB):
-    shutil.rmtree(PUB)
-os.makedirs(PUB)
+os.makedirs(PUB, exist_ok=True)
 
-meta_out = {}
+meta_out = dict(keep)          # 先放沿用的，這次重做的下面再蓋上去
 nfiles = 0
 lost_picks = []
 t0 = time.time()
@@ -377,6 +442,24 @@ for nm, info in sorted(scored.items()):
     os.makedirs(d, exist_ok=True)
     items = []
     for i, r in enumerate(chosen, 1):
+        # 沿用的圖本來就是上次壓好的成品。重新壓一次等於再掉一層畫質，
+        # 每跑一次掉一層。所以位置沒變就不動它，位置變了就複製過去。
+        if r.get('rec'):
+            src_b, src_t = r['p'], r['p'][:-4] + 't.jpg'
+            dst_b, dst_t = f'{d}/{i}-{r["k"]}.jpg', f'{d}/{i}-{r["k"]}t.jpg'
+            if os.path.exists(src_t):
+                try:
+                    if os.path.abspath(src_b) != os.path.abspath(dst_b):
+                        shutil.copy2(src_b, dst_b)
+                        shutil.copy2(src_t, dst_t)
+                    it = {'i': i, 'v': r['k'], 'd': r['d'], 'a': r['a']}
+                    if r.get('t'):
+                        it['t'] = r['t']
+                    items.append(it)
+                    nfiles += 2
+                    continue
+                except OSError:
+                    pass
         try:
             im = Image.open(r['p'])
             im = ImageOps.exif_transpose(im).convert('RGB')
@@ -396,7 +479,26 @@ for nm, info in sorted(scored.items()):
         items.append(it)
         nfiles += 2
     if items:
+        # 先寫新的，再清掉這個資料夾裡不屬於這次結果的舊檔。
+        # 順序反過來的話，中途出錯就會留下一個空資料夾。
+        want = {f'{it["i"]}-{it["v"]}{t}.jpg' for it in items for t in ('', 't')}
+        for f2 in os.listdir(d):
+            if f2 not in want:
+                try:
+                    os.remove(os.path.join(d, f2))
+                except OSError:
+                    pass
         meta_out[nm] = {'s': info['s'], 'ph': items}
+    elif nm in prev_meta:
+        meta_out[nm] = prev_meta[nm]      # 這次一張都做不出來，沿用舊的
+
+# 沒有任何一種花用到的資料夾（花名改掉、或主檔改成不收錄）清掉，不然會越積越多。
+# meta_out 這時候已經是完整的最終結果，不在裡面的就是真的沒人要了。
+live = {v['s'] for v in meta_out.values()}
+for e2 in os.listdir(PUB):
+    p2 = os.path.join(PUB, e2)
+    if os.path.isdir(p2) and e2 not in live:
+        shutil.rmtree(p2, ignore_errors=True)
 
 os.makedirs(os.path.join(ROOT, 'src/photos'), exist_ok=True)
 json.dump(meta_out, open(os.path.join(ROOT, 'src/photos', SLUG + '.json'), 'w', encoding='utf-8'),
@@ -440,8 +542,12 @@ else:
 n_fresh = sum(len(v) for v in fresh.values())
 print(f'這一批新增 {n_fresh} 張、{len(fresh)} 種'
       + (f'（{batch}）' if batch else '') if n_fresh else '這一批沒有新照片')
-json.dump({'batch': batch, 'new': fresh,
-           'keys': {nm: sorted(ks) for nm, ks in now_keys.items()}},
+# 這次沒跑到的花沿用上次的清單，否則 FB 匯出回來那天，
+# 它們的照片會全部被當成「新增照片」，挑片工具的新增篩選就廢了。
+keys_out = {nm: sorted(ks) for nm, ks in now_keys.items()}
+for nm, ks in old_keys.items():
+    keys_out.setdefault(nm, sorted(ks))
+json.dump({'batch': batch, 'new': fresh, 'keys': keys_out},
           open(SNAP, 'w', encoding='utf-8'), ensure_ascii=False)
 
 
@@ -481,6 +587,8 @@ with open(os.path.join(PICKER, '挑片.html'), 'w', encoding='utf-8') as fh:
     fh.write(html)
 
 print(f'挑片工具寫到 {PICKER}/挑片.html（{len(pick_idx)} 種）')
+json.dump({'picks': manual, 'bans': {k: sorted(v) for k, v in banned.items() if v}},
+          open(PKBAK, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 if skipped:
     n = sum(len(v) for v in skipped.values())
