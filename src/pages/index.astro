@@ -216,7 +216,9 @@ const works = [
   </section>
 
   <section class="work">
-    <h2>找{AUTHOR}</h2>
+    {/* 白底卡片，和 Q故事那張同一套，讓付費項目在整頁裡站出來 */}
+    <div class="wcard">
+    <h2>商業合作</h2>
     <p class="sub">花曆和網站永遠免費公開。下面這些是{AUTHOR}的時間和照片，屬於付費的項目。</p>
     <ul class="jobs">
       {works.map((w) => (
@@ -259,6 +261,8 @@ const works = [
       <a class="btn solid" href={ASK_URL} rel="noopener" target="_blank">填服務詢問單</a>
       <span>以上任何一項，填一張表單就可以，{AUTHOR}會親自回覆。</span>
     </p>
+    </div>
+    {/* 故事引導是另外一件事，留在卡片外面，比較不搶戲 */}
     <p class="other">{AUTHOR}同時也是故事引導師，開立故事整理與故事溝通相關課程，可以到 <a href="https://timestory.tw" rel="noopener" target="_blank">時立方</a>看更多資訊。</p>
   </section>
 
@@ -360,7 +364,10 @@ const works = [
 .btn.sm{font-size:14px;padding:7px 14px}
 .eb{font-size:14px}
 
-.work{border-top:1px solid var(--mist);margin-top:36px;padding-top:28px}
+.work{margin-top:36px}
+.wcard{padding:28px 30px;border:1px solid var(--mist);border-radius:18px;background:var(--panel)}
+.wcard h2{margin-top:0}
+@media (max-width:620px){.wcard{padding:22px 20px}}
 .jobs{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:16px;max-width:44em}
 .jobs li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:start}
 .ic{width:40px;height:40px;border-radius:50%;border:1px solid var(--mist);background:var(--panel);
@@ -393,11 +400,13 @@ const works = [
 .cta{margin:24px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
 .cta .btn{display:inline-block;text-decoration:none;white-space:nowrap}
 .cta span{font-size:14px;color:var(--leaf)}
-.other{margin:22px 0 0;font-size:15px;line-height:1.85;max-width:40em}
+.other{margin:24px 0 0;font-size:17px;line-height:1.9;max-width:40em}
 
 .views{text-align:center;margin:34px 0 14px}
+/* 字級和「填服務詢問單」那顆按鈕一樣（16px，網站的基準字級）——
+   這個數字每天在長，值得看得清楚，不該是頁尾的註腳 */
 .views span{display:inline-block;background:var(--panel);border:1px solid var(--mist);
-  border-radius:999px;padding:7px 18px;color:var(--leaf);font-size:14px}
+  border-radius:999px;padding:9px 22px;color:var(--leaf);font-size:16px}
 .views b{color:var(--ink);font-variant-numeric:tabular-nums}
 
 /* 區塊底色：::before 往左右各撐到視窗邊緣，所以色塊是整頁寬，
