@@ -143,14 +143,8 @@ const works = [
         </span>
       </a>
     ))}
-    {cards[0] && (
-      <p class="jump">
-        <a href={`/${cards[0].slug}/month/`}>依月份看</a>
-        <a href={`/${cards[0].slug}/map/`}>找花地圖</a>
-        <a href={`/${cards[0].slug}/passport/`}>拍花護照</a>
-        {vids.length > 0 && <a href={`/${cards[0].slug}/video/`}>導覽影片</a>}
-      </p>
-    )}
+    {/* 依月份看／找花地圖／拍花護照／導覽影片都拿掉了——那些是花曆裡面的工具，
+        進到花曆自然看得到，放在首頁等於把下一層的選單搬到門口。 */}
   </section>
 
   <section class="chan">
@@ -215,7 +209,9 @@ const works = [
     </div>
   </section>
 
-  <section class="work">
+  {/* 底色一段一段交錯：自我介紹（原色）→ 花曆（淡色）→ 頻道（原色）
+      → Q故事（淡色）→ 書（原色）→ 商業合作（淡色） */}
+  <section class="work band">
     {/* 白底卡片，和 Q故事那張同一套，讓付費項目在整頁裡站出來 */}
     <div class="wcard">
     <h2>商業合作</h2>
@@ -364,7 +360,7 @@ const works = [
 .btn.sm{font-size:14px;padding:7px 14px}
 .eb{font-size:14px}
 
-.work{margin-top:36px}
+.work{margin-top:36px;padding:30px 0}
 .wcard{padding:28px 30px;border:1px solid var(--mist);border-radius:18px;background:var(--panel)}
 .wcard h2{margin-top:0}
 @media (max-width:620px){.wcard{padding:22px 20px}}
