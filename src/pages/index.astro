@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
 import { videosOf, featuredOf, thumbOf } from '../videos.mjs';
-import { STORIES, featured as featuredStories, cover as storyCover } from '../stories.mjs';
+import { STORIES, featured as featuredStories, cover as storyCover, storyUrl } from '../stories.mjs';
 import { AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 
 const nf = (n) => n.toLocaleString('en-US');
@@ -171,23 +171,25 @@ const works = [
 
   {STORIES.length > 0 && (
     <section class="tales band">
-      <a class="tcard" href="/story/">
-        <span class="tx">
-          <b>Q故事</b>
+      {/* 整張卡片不再是一個連結：六張封面各自連到那一篇，文字區才是連到清單。
+          連結不能包連結，所以外層改成 div。 */}
+      <div class="tcard">
+        <div class="tx">
+          <a class="h" href="/story/"><b>Q故事</b></a>
           <p>{STORIES.length} 篇短篇，多數從一張花的照片開始——看見一朵花的樣子，想到一個故事。</p>
-          <span class="more">看全部 {STORIES.length} 篇 →</span>
-        </span>
-        <span class="shots">
+          <a class="more" href="/story/">看全部 {STORIES.length} 篇 →</a>
+        </div>
+        <div class="shots">
           {featuredStories().map((s) => (
-            <span class="it">
+            <a class="it" href={storyUrl(s)}>
               <span class="th">
                 <img src={storyCover(s, true)} alt="" width="480" height="360" loading="lazy" decoding="async" />
               </span>
               <span class="tt">{s.t}</span>
-            </span>
+            </a>
           ))}
-        </span>
-      </a>
+        </div>
+      </div>
     </section>
   )}
   <section class="books">
@@ -368,14 +370,17 @@ const works = [
 /* Q故事：整段底色，卡片左邊文字、右邊四張封面 */
 .tales{padding:30px 0}
 .tcard{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:26px;align-items:center;
-  padding:26px 28px;border:1px solid var(--mist);border-radius:18px;background:var(--panel);
-  color:var(--ink);text-decoration:none}
-.tcard:hover{border-color:var(--bloom)}
+  padding:26px 28px;border:1px solid var(--mist);border-radius:18px;background:var(--panel)}
+.tcard .h{text-decoration:none;color:var(--ink)}
+.tcard .h:hover b{color:var(--bloom)}
 .tcard b{font-family:var(--serif);font-size:24px;display:block}
 .tcard p{margin:8px 0 12px;font-size:15px;line-height:1.85;color:var(--leaf)}
-.tcard .more{font-size:14px;color:var(--bloom);font-weight:700}
+.tcard .more{font-size:14px;color:var(--bloom);font-weight:700;text-decoration:none}
+.tcard .more:hover{text-decoration:underline}
 .tcard .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px}
-.tcard .it{display:block}
+.tcard .it{display:block;text-decoration:none;color:var(--ink)}
+.tcard .it:hover .th{outline:2px solid var(--bloom);outline-offset:2px}
+.tcard .it:hover .tt{color:var(--bloom)}
 .tcard .th{display:block;border-radius:10px;overflow:hidden;background:var(--mist);
   line-height:0;aspect-ratio:4/3}
 .tcard .th img{width:100%;height:100%;object-fit:cover;display:block}
