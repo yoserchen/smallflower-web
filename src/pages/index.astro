@@ -179,8 +179,11 @@ const works = [
         </span>
         <span class="shots">
           {featuredStories().map((s) => (
-            <span class="th">
-              <img src={storyCover(s, true)} alt="" width="480" height="360" loading="lazy" decoding="async" />
+            <span class="it">
+              <span class="th">
+                <img src={storyCover(s, true)} alt="" width="480" height="360" loading="lazy" decoding="async" />
+              </span>
+              <span class="tt">{s.t}</span>
             </span>
           ))}
         </span>
@@ -371,10 +374,13 @@ const works = [
 .tcard b{font-family:var(--serif);font-size:24px;display:block}
 .tcard p{margin:8px 0 12px;font-size:15px;line-height:1.85;color:var(--leaf)}
 .tcard .more{font-size:14px;color:var(--bloom);font-weight:700}
-.tcard .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tcard .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px}
+.tcard .it{display:block}
 .tcard .th{display:block;border-radius:10px;overflow:hidden;background:var(--mist);
   line-height:0;aspect-ratio:4/3}
 .tcard .th img{width:100%;height:100%;object-fit:cover;display:block}
+/* 放篇名不放花名——這一塊要看起來像故事，不像圖鑑 */
+.tcard .tt{display:block;font-family:var(--serif);font-size:15px;line-height:1.4;margin-top:7px}
 @media (max-width:760px){
   .tcard{grid-template-columns:1fr;gap:18px}
   .tcard .shots{grid-template-columns:repeat(2,1fr)}
