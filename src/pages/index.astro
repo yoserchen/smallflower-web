@@ -1,10 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
 import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
+import { videosOf, featuredOf, thumbOf } from '../videos.mjs';
 import { AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 
 const nf = (n) => n.toLocaleString('en-US');
 const cards = LIVE_CALENDARS.map((c) => ({ ...c, n: liveOf(c.slug).length }));
+// 首頁那張影片卡片只放三支（在 src/videos.mjs 的 FEATURED 指定），其餘到清單頁看
+const vids = cards[0] ? videosOf(cards[0].slug) : [];
+const feat = cards[0] ? featuredOf(cards[0].slug) : [];
 const total = cards.reduce((a, c) => a + c.n, 0);
 const pins = new Set();
 LIVE_CALENDARS.forEach((c) => speciesOf(c.slug).forEach((s) => (s.no || []).forEach((n) => pins.add(c.slug + n))));
@@ -93,19 +97,46 @@ const works = [
   </section>
 
   <section class="main band">
-    {cards.map((c, i) => (
-      <a class={'cal' + (i === 0 ? ' big' : '')} href={`/${c.slug}/`}>
-        {i === 0 && (
+    {/* 第一本花曆和影片卡片並排；之後新增的花曆排在下面，不要擠進這一列 */}
+    <div class={'row' + (vids.length > 0 ? ' two' : '')}>
+      {cards.slice(0, 1).map((c) => (
+        <a class="cal big" href={`/${c.slug}/`}>
           <svg class="bloom" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
             {PETALS.map(([a, d, on]) => (
               <path d={d} transform={`translate(100,100) rotate(${a})`} class={on ? 'on' : ''} />
             ))}
           </svg>
-        )}
+          <span class="ct">
+            <b>{c.name}</b>
+            <p>{c.blurb}</p>
+            <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+          </span>
+        </a>
+      ))}
+      {cards[0] && vids.length > 0 && (
+        <a class="vid" href={`/${cards[0].slug}/video/`}>
+          <b>植物園導覽影片</b>
+          <span class="n">{vids.length} 支，一區一支</span>
+          <span class="list">
+            {feat.map((x) => (
+              <span class="it">
+                <span class="th">
+                  <img src={thumbOf(x.v)} alt="" width="320" height="180" loading="lazy" decoding="async" />
+                </span>
+                <span class="tt">{x.t}</span>
+              </span>
+            ))}
+          </span>
+          <span class="more">看全部 {vids.length} 支 →</span>
+        </a>
+      )}
+    </div>
+    {cards.slice(1).map((c) => (
+      <a class="cal" href={`/${c.slug}/`}>
         <span class="ct">
           <b>{c.name}</b>
           <p>{c.blurb}</p>
-          <span class="n">{nf(c.n)} 種{c.hasMap && `　${nf(pins.size)} 株標在地圖上`}</span>
+          <span class="n">{nf(c.n)} 種</span>
         </span>
       </a>
     ))}
@@ -114,6 +145,7 @@ const works = [
         <a href={`/${cards[0].slug}/month/`}>依月份看</a>
         <a href={`/${cards[0].slug}/map/`}>找花地圖</a>
         <a href={`/${cards[0].slug}/passport/`}>拍花護照</a>
+        {vids.length > 0 && <a href={`/${cards[0].slug}/video/`}>導覽影片</a>}
       </p>
     )}
   </section>
@@ -247,8 +279,28 @@ const works = [
   background:var(--panel);color:var(--ink);text-decoration:none}
 .cal + .cal{margin-top:12px}
 .cal:hover{border-color:var(--bloom)}
+/* 花曆卡片和影片卡片並排。半欄只剩約 500px，所以花鐘從 168 縮到 120，
+   不然它會吃掉三分之一的寬度，把標題壓到換行。 */
+.row.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+@media (max-width:760px){.row.two{grid-template-columns:1fr}}
 .cal.big{padding:30px 28px;border-color:var(--bloom)}
-.cal.big{display:grid;grid-template-columns:168px minmax(0,1fr);gap:28px;align-items:center}
+.cal.big{display:grid;grid-template-columns:150px minmax(0,1fr);gap:24px;align-items:center}
+.row.two .cal.big b{font-size:26px}
+/* 半欄只有兩行，讓瀏覽器把兩行長度拉平，才不會斷在「在哪個地／方」這種地方 */
+.row.two .cal.big p{text-wrap:balance}
+
+/* 影片卡片 */
+.vid{display:flex;flex-direction:column;padding:24px;border:1px solid var(--mist);
+  border-radius:18px;background:var(--panel);color:var(--ink);text-decoration:none}
+.vid:hover{border-color:var(--bloom)}
+.vid b{font-family:var(--serif);font-size:22px;display:block}
+.vid > .n{font-size:14px;color:var(--bloom);font-weight:700;margin-top:3px}
+.vid .list{display:flex;flex-direction:column;gap:9px;margin:16px 0 14px;flex:1}
+.vid .it{display:flex;align-items:center;gap:11px}
+.vid .th{flex:0 0 104px;line-height:0;border-radius:7px;overflow:hidden;background:var(--mist)}
+.vid .th img{width:104px;height:59px;object-fit:cover;display:block}
+.vid .tt{font-size:15px;line-height:1.45}
+.vid .more{font-size:14px;color:var(--bloom);font-weight:700}
 .cal .ct{display:block;min-width:0}
 .bloom{width:100%;height:auto;display:block}
 .bloom path{fill:var(--mist);stroke:var(--panel);stroke-width:1.6;transition:fill .25s}

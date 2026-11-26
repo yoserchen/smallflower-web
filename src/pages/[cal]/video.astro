@@ -1,0 +1,76 @@
+---
+import Base from '../../layouts/Base.astro';
+import { LIVE_CALENDARS, liveOf } from '../../lib.mjs';
+import { videosOf, videosForZone, thumbOf, watchOf } from '../../videos.mjs';
+import { AUTHOR } from '../../config.mjs';
+export function getStaticPaths() {
+  return LIVE_CALENDARS.filter((c) => videosOf(c.slug).length > 0).map(
+    (c) => ({ params: { cal: c.slug }, props: { cal: c } }));
+}
+const { cal } = Astro.props;
+const vids = videosOf(cal.slug);
+const live = liveOf(cal.slug);
+// 每一支影片涵蓋幾種花：把所有區跑一遍，看哪幾區掛到這一支
+const byZone = {};
+live.forEach((s) => { const z = s.z || ''; if (z) byZone[z] = (byZone[z] || 0) + 1; });
+const count = {};
+Object.keys(byZone).forEach((z) => {
+  videosForZone(cal.slug, z).forEach((x) => { count[x.v] = (count[x.v] || 0) + byZone[z]; });
+});
+const covered = Object.keys(byZone).filter((z) => videosForZone(cal.slug, z).length > 0);
+const nCovered = covered.reduce((a, z) => a + byZone[z], 0);
+const missing = Object.keys(byZone).filter((z) => videosForZone(cal.slug, z).length === 0)
+  .sort((a, b) => byZone[b] - byZone[a]);
+const nf = (n) => n.toLocaleString('en-US');
+---
+<Base title={`${cal.place}導覽影片`} cal={cal} current="video"
+      description={`${AUTHOR}帶你走${cal.place}的每一區，一區一支影片，共 ${vids.length} 支。`}>
+  <section>
+    <h1>{cal.place}導覽影片</h1>
+    <p class="sub">{AUTHOR}帶你走每一區。<br />
+      一區一支，目前 {vids.length} 支，涵蓋 {nf(nCovered)} 種花。</p>
+
+    <div class="grid">
+      {vids.map((x) => (
+        <a class="v" href={watchOf(x.v)} rel="noopener" target="_blank">
+          <span class="th">
+            <img src={thumbOf(x.v)} alt="" width="320" height="180" loading="lazy" decoding="async" />
+            <span class="play" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5l11 7-11 7z" fill="currentColor" /></svg>
+            </span>
+          </span>
+          <b>{x.t}</b>
+          {(count[x.v] || x.note) && (
+            <span class={'n' + (count[x.v] ? '' : ' sub')}>
+              {count[x.v] ? `${nf(count[x.v])} 種花` : x.note}
+            </span>
+          )}
+        </a>
+      ))}
+    </div>
+
+    {missing.length > 0 && (
+      <p class="note">還沒拍到的區：{missing.map((z) => `${z}（${byZone[z]} 種）`).join('、')}。
+        拍好會放上來。</p>
+    )}
+
+    <p class="note">在手機上看影片、再帶著<a href={`/${cal.slug}/map/`}>找花地圖</a>走一趟，
+      是最省力的方式——影片認得出那一區長什麼樣子，地圖告訴你每一株在哪裡。</p>
+  </section>
+</Base>
+<style>
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px 18px;margin-top:22px}
+.v{display:block;color:var(--ink);text-decoration:none}
+.th{display:block;position:relative;border-radius:12px;overflow:hidden;
+  border:1px solid var(--mist);background:var(--mist);line-height:0}
+.th img{width:100%;height:auto;display:block;aspect-ratio:16/9;object-fit:cover}
+.play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;opacity:.9;transition:transform .2s}
+.play svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.v:hover .th{border-color:var(--bloom)}
+.v:hover .play{transform:scale(1.18)}
+.v b{display:block;font-family:var(--serif);font-size:18px;margin:10px 0 2px;line-height:1.4}
+.v .n{font-size:13px;color:var(--bloom);font-weight:700}
+.v .n.sub{color:var(--leaf);font-weight:500}
+.note{color:var(--leaf);font-size:14px;line-height:1.9;margin-top:26px;max-width:40em}
+</style>

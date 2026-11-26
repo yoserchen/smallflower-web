@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { BRAND, AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 import { LIVE_CALENDARS } from '../lib.mjs';
+import { videosOf } from '../videos.mjs';
 const { title, description = `${AUTHOR}的花曆：什麼時候開、開在哪裡。`,
         cal = null, current = '', image = '/og.jpg', imageAlt = '' } = Astro.props;
 const suffix = cal ? cal.name : BRAND;
@@ -52,6 +53,7 @@ const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
       {nc && <a href={`/${nc.slug}/month/`} aria-current={current === 'month' ? 'page' : undefined}>月份</a>}
       {nc && nc.hasMap && <a href={`/${nc.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>找花地圖</a>}
       {nc && nc.passport && nc.passport.length > 0 && <a href={`/${nc.slug}/passport/`} aria-current={current === 'passport' ? 'page' : undefined}>拍花護照</a>}
+      {nc && videosOf(nc.slug).length > 0 && <a href={`/${nc.slug}/video/`} aria-current={current === 'video' ? 'page' : undefined}>導覽影片</a>}
       <a href="/support/" aria-current={current === 'support' ? 'page' : undefined}>贊助</a>
       <a href="/about/" aria-current={current === 'about' ? 'page' : undefined}>關於</a>
     </nav>
