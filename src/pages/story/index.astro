@@ -1,0 +1,78 @@
+---
+import Base from '../../layouts/Base.astro';
+import { STORIES, CATS, storyUrl, cover } from '../../stories.mjs';
+import { AUTHOR } from '../../config.mjs';
+const nf = (n) => n.toLocaleString('en-US');
+const withFlower = STORIES.filter((s) => s.f.length).length;
+const list = STORIES.map((s) => ({
+  id: s.id, t: s.t, d: s.d, c: s.c, f: s.f.concat(s.o).slice(0, 3),
+  th: cover(s, true), u: storyUrl(s),
+}));
+---
+<Base title="Q故事" current="story"
+      description={`${AUTHOR}寫的 ${STORIES.length} 篇短篇故事，多數從一張花的照片開始。`}>
+  <section>
+    <h1>Q故事</h1>
+    <p class="sub">{STORIES.length} 篇短篇，多數從一張花的照片開始——
+      看見一朵花的樣子，想到一個故事。<br />
+      其中 {withFlower} 篇裡的花，在<a href="/tpbg/">台北植物園花曆</a>查得到。</p>
+
+    <div class="filters" id="filters">
+      <button class="chip on" data-c="">全部 <i>{STORIES.length}</i></button>
+      {CATS.map(([c, n]) => <button class="chip" data-c={c}>{c} <i>{n}</i></button>)}
+    </div>
+    <p class="count" id="count"></p>
+
+    <div class="grid" id="grid">
+      {list.map((s) => (
+        <a class="st" href={s.u} data-c={s.c.join('|')}>
+          <span class="th">
+            {s.th
+              ? <img src={s.th} alt="" width="480" height="360" loading="lazy" decoding="async" />
+              : <i></i>}
+          </span>
+          <b>{s.t}</b>
+          {s.f.length > 0 && <span class="fl">{s.f.join('、')}</span>}
+        </a>
+      ))}
+    </div>
+  </section>
+  <script is:inline>
+  (function () {
+    var grid = document.getElementById('grid');
+    var cards = [].slice.call(grid.children);
+    var count = document.getElementById('count');
+    function apply(c) {
+      var n = 0;
+      cards.forEach(function (el) {
+        var ok = !c || el.dataset.c.split('|').indexOf(c) >= 0;
+        el.hidden = !ok; if (ok) n++;
+      });
+      count.textContent = c ? c + '：' + n + ' 篇' : '';
+    }
+    document.getElementById('filters').addEventListener('click', function (e) {
+      var b = e.target.closest('.chip'); if (!b) return;
+      [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+      apply(b.dataset.c);
+    });
+  })();
+  </script>
+</Base>
+<style>
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0}
+.chip{font:inherit;font-size:14px;cursor:pointer;background:var(--panel);color:var(--ink);
+  border:1px solid var(--mist);border-radius:999px;padding:6px 14px}
+.chip i{font-style:normal;color:var(--leaf);font-size:12.5px;margin-left:3px}
+.chip:hover{border-color:var(--bloom)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.on i{color:var(--paper);opacity:.7}
+.count{font-size:14px;color:var(--leaf);margin:12px 0 0;min-height:1.2em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px 18px;margin-top:10px}
+.st{display:block;color:var(--ink);text-decoration:none}
+.st .th{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--mist);
+  background:var(--mist);line-height:0;aspect-ratio:4/3}
+.st .th img{width:100%;height:100%;object-fit:cover;display:block}
+.st:hover .th{border-color:var(--bloom)}
+.st b{display:block;font-family:var(--serif);font-size:18px;margin:10px 0 2px;line-height:1.4}
+.st .fl{font-size:13px;color:var(--bloom);font-weight:700}
+</style>

@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
 import { videosOf, featuredOf, thumbOf } from '../videos.mjs';
+import { STORIES, cover as storyCover } from '../stories.mjs';
 import { AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 
 const nf = (n) => n.toLocaleString('en-US');
@@ -166,7 +167,25 @@ const works = [
     </div>
   </section>
 
-  <section class="books band">
+  {STORIES.length > 0 && (
+    <section class="tales band">
+      <a class="tcard" href="/story/">
+        <span class="tx">
+          <b>Q故事</b>
+          <p>{STORIES.length} 篇短篇，多數從一張花的照片開始——看見一朵花的樣子，想到一個故事。</p>
+          <span class="more">看全部 {STORIES.length} 篇 →</span>
+        </span>
+        <span class="shots">
+          {STORIES.slice(0, 4).map((s) => (
+            <span class="th">
+              <img src={storyCover(s, true)} alt="" width="480" height="360" loading="lazy" decoding="async" />
+            </span>
+          ))}
+        </span>
+      </a>
+    </section>
+  )}
+  <section class="books">
     <h2>{AUTHOR}的書</h2>
     <div class="three">
       {books.map((b) => (
@@ -341,6 +360,23 @@ const works = [
   display:grid;place-items:center;color:var(--bloom)}
 .jobs b{font-family:var(--serif);font-size:19px;display:block}
 .jobs div span{font-size:15px;color:var(--leaf);line-height:1.8}   /* 只管說明文字，別蓋到 .ic */
+/* Q故事：整段底色，卡片左邊文字、右邊四張封面 */
+.tales{padding:30px 0}
+.tcard{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:26px;align-items:center;
+  padding:26px 28px;border:1px solid var(--mist);border-radius:18px;background:var(--panel);
+  color:var(--ink);text-decoration:none}
+.tcard:hover{border-color:var(--bloom)}
+.tcard b{font-family:var(--serif);font-size:24px;display:block}
+.tcard p{margin:8px 0 12px;font-size:15px;line-height:1.85;color:var(--leaf)}
+.tcard .more{font-size:14px;color:var(--bloom);font-weight:700}
+.tcard .shots{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tcard .th{display:block;border-radius:10px;overflow:hidden;background:var(--mist);
+  line-height:0;aspect-ratio:4/3}
+.tcard .th img{width:100%;height:100%;object-fit:cover;display:block}
+@media (max-width:760px){
+  .tcard{grid-template-columns:1fr;gap:18px}
+  .tcard .shots{grid-template-columns:repeat(4,1fr)}
+}
 .cta{margin:24px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
 .cta .btn{display:inline-block;text-decoration:none;white-space:nowrap}
 .cta span{font-size:14px;color:var(--leaf)}

@@ -1,0 +1,101 @@
+---
+import Base from '../../layouts/Base.astro';
+import { STORIES, storyUrl, cover } from '../../stories.mjs';
+import { LIVE_CALENDARS, speciesOf, photosOf, pv, url as flowerUrl } from '../../lib.mjs';
+export function getStaticPaths() {
+  return STORIES.map((s, i) => ({
+    params: { id: s.id },
+    props: { s, prev: STORIES[i - 1] || null, next: STORIES[i + 1] || null },
+  }));
+}
+const { s, prev, next } = Astro.props;
+const cal = LIVE_CALENDARS[0];
+// 故事裡提到、而且花曆查得到的花：連過去，順便帶一張那種花的照片
+const flowers = cal
+  ? s.f.map((n) => {
+      const sp = speciesOf(cal.slug).find((x) => x.n === n);
+      if (!sp) return null;
+      const p = photosOf(cal.slug, sp);
+      return { n, u: flowerUrl(cal.slug, sp),
+               th: p && p.ph.length ? `/p/${p.s}/${pv(p.ph[0])}t.jpg` : null };
+    }).filter(Boolean)
+  : [];
+const d = s.d.split('-');
+---
+<Base title={s.t} current="story"
+      description={`${s.t}：${s.ct ? s.ct + '。' : ''}Q故事`}
+      image={s.cv ? `/s/${s.cv}` : '/og.jpg'}>
+  <article class="story">
+    <p class="crumb"><a href="/story/">Q故事</a>{s.c[0] && <span> ／ {s.c[0]}</span>}</p>
+    <h1>{s.t}</h1>
+    <p class="meta">{d[0]} 年 {+d[1]} 月 {+d[2]} 日
+      {s.c.map((c) => <span class="tag">{c}</span>)}</p>
+
+    {s.cv && (
+      <figure class="cv">
+        <img src={`/s/${s.cv}`} alt={s.ct || ''} loading="eager" decoding="async" />
+        {s.ct && <figcaption>{s.ct}</figcaption>}
+      </figure>
+    )}
+
+    <div class="body" set:html={s.h}></div>
+
+    {(flowers.length > 0 || s.o.length > 0) && (
+      <section class="seen">
+        <h2>這篇裡的花</h2>
+        {flowers.length > 0 && (
+          <div class="fl">
+            {flowers.map((f) => (
+              <a href={f.u}>
+                {f.th
+                  ? <img src={f.th} alt="" width="48" height="48" loading="lazy" decoding="async" />
+                  : <i></i>}
+                <span>{f.n}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {s.o.length > 0 && (
+          <p class="out">另外還有：{s.o.join('、')}
+            <small>（不在台北植物園的記錄裡）</small></p>
+        )}
+      </section>
+    )}
+
+    <nav class="pn">
+      {prev && <a class="p" href={storyUrl(prev)}>← {prev.t}</a>}
+      {next && <a class="n" href={storyUrl(next)}>{next.t} →</a>}
+    </nav>
+  </article>
+</Base>
+<style>
+.story{max-width:40em;margin:0 auto}
+.crumb{font-size:14px;color:var(--leaf);margin:26px 0 6px}
+.crumb a{color:var(--leaf)}
+.story h1{font-size:clamp(28px,5vw,38px);margin:0 0 10px}
+.meta{font-size:13.5px;color:var(--leaf);margin:0 0 22px;display:flex;flex-wrap:wrap;
+  align-items:center;gap:6px}
+.meta .tag{background:var(--mist);border-radius:999px;padding:2px 10px;font-size:12.5px}
+.cv{margin:0 0 26px}
+.cv img{width:100%;height:auto;border-radius:14px;display:block}
+.cv figcaption{font-size:13.5px;color:var(--leaf);margin-top:7px;text-align:center}
+.body{font-size:17px;line-height:2.05}
+.body :global(p){margin:0 0 1.15em}
+.body :global(img){max-width:100%;height:auto;border-radius:12px;display:block;margin:20px auto}
+.body :global(figure){margin:22px 0}
+.body :global(figcaption){font-size:13.5px;color:var(--leaf);text-align:center;margin-top:6px}
+.seen{border-top:1px solid var(--mist);margin-top:34px;padding-top:22px}
+.seen h2{font-family:var(--serif);font-size:19px;margin:0 0 14px}
+.seen .fl{display:flex;flex-wrap:wrap;gap:10px 14px}
+.seen .fl a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);
+  border:1px solid var(--mist);border-radius:999px;padding:5px 14px 5px 5px;font-size:15px}
+.seen .fl a:hover{border-color:var(--bloom)}
+.seen .fl img,.seen .fl i{width:34px;height:34px;border-radius:50%;background:var(--mist);
+  object-fit:cover;display:block}
+.out{font-size:14px;color:var(--leaf);margin:14px 0 0}
+.out small{font-size:13px}
+.pn{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--mist);
+  margin-top:34px;padding-top:18px;font-size:15px}
+.pn a{text-decoration:none}
+.pn .n{margin-left:auto;text-align:right}
+</style>

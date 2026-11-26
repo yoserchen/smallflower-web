@@ -54,6 +54,7 @@ const nc = cal || (LIVE_CALENDARS.length === 1 ? LIVE_CALENDARS[0] : null);
       {nc && nc.hasMap && <a href={`/${nc.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>找花地圖</a>}
       {nc && nc.passport && nc.passport.length > 0 && <a href={`/${nc.slug}/passport/`} aria-current={current === 'passport' ? 'page' : undefined}>拍花護照</a>}
       {nc && videosOf(nc.slug).length > 0 && <a href={`/${nc.slug}/video/`} aria-current={current === 'video' ? 'page' : undefined}>導覽影片</a>}
+      <a href="/story/" aria-current={current === 'story' ? 'page' : undefined}>故事</a>
       <a href="/support/" aria-current={current === 'support' ? 'page' : undefined}>贊助</a>
       <a href="/about/" aria-current={current === 'about' ? 'page' : undefined}>關於</a>
     </nav>
