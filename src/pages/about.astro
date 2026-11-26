@@ -3,28 +3,12 @@ import Base from '../layouts/Base.astro';
 import { FB_URL, YOUTUBE_URL, BRAND, AUTHOR } from '../config.mjs';
 import { LIVE_CALENDARS, liveOf } from '../lib.mjs';
 const total = LIVE_CALENDARS.reduce((a, c) => a + liveOf(c.slug).length, 0);
-const books = [
-  {
-    t: '花精靈',
-    url: 'https://readmoo.com/book/210501281000101',
-    d: '結合花、攝影與故事創作的書。從精靈的樣貌、花名的諧音梗，一路寫到四篇長篇連載；還設計了創意練習讓讀者一起發想，並收錄近兩百科花卉、一百九十二種的分科紀錄。',
-  },
-  {
-    t: '路',
-    url: 'https://readmoo.com/book/210500479000101',
-    d: '記錄前後將近五十年的求學、工作與生活。章節不按時間順序，而是以舊式錄音機的播放形式編排：暫停、快轉、準備、倒帶、播放。',
-  },
-  {
-    t: '媽媽的味道',
-    url: 'https://readmoo.com/book/210501240000101',
-    d: '分成兩篇。前篇「媽媽的料理」記下四十多道菜，後篇描述「媽媽的生活」。',
-  },
-];
+// 書的介紹移到首頁了（那裡還能訂購），這一頁只講花曆這份資料本身。
 ---
-<Base title="關於" current="about"
+<Base title="關於這份花曆" current="about"
       description={`${BRAND}是${AUTHOR}長期在台北植物園拍花的記錄整理，目前收錄 ${total.toLocaleString()} 種。`}>
   <section class="about">
-    <h1>關於</h1>
+    <h1>關於這份花曆</h1>
 
     <p>「{BRAND}」網站，是{AUTHOR}長期在台北植物園拍花的記錄整理。幾年來去過台北植物園超過一千次，
       拍到的花超過一千三百種，數萬張的照片。最近兩三年還舉辦「和{AUTHOR}一起到植物園拍小花」的活動五十幾場，
@@ -53,19 +37,6 @@ const books = [
     <p>花曆的資料全部來自{AUTHOR}實地拍攝的記錄，網站的建構也是自己出錢出力完成，全部開放免費使用。
       未來還有機會新增其他地點的花曆。如果您想對{AUTHOR}的這份熱忱給予實質的幫忙，
       歡迎您加入 <a href="/support/">贊助</a>的行列。</p>
-
-    <h2 id="books">{AUTHOR}的書</h2>
-
-    <p>除了花曆之外，{AUTHOR}也出了三本書，現在已經轉成電子書格式，在讀墨平台可以看到，也歡迎大家參考閱讀。</p>
-
-    <ul class="books">
-      {books.map((b) => (
-        <li>
-          <a href={b.url} rel="noopener" target="_blank"><b>{b.t}</b></a>
-          <span>{b.d}</span>
-        </li>
-      ))}
-    </ul>
 
     <p class="end">如果您對這個網站有想法，或者發現網站有錯誤的資料，
       歡迎到 <a href={FB_URL} rel="noopener">FB 粉絲專頁</a>與{AUTHOR}聯絡。感謝您的支持與鼓勵！</p>

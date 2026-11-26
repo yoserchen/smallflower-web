@@ -13,6 +13,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL(image, Astro.site);
 const nc = cal;                       // 月份、地圖這些只在花曆底下出現
 const home = LIVE_CALENDARS[0] || null;   // 個人頁面的選單要連到的那本花曆
+// 選單只出現在兩個地方：首頁（當捷徑）和花曆底下（當工具列）。
+// 導覽影片、Q故事、贊助、關於都是看完就走的單頁，不放選單比較乾淨——
+// 而且「贊助」「月份」這些選項在那些頁面上本來就不成立。
+const isHome = Astro.url.pathname === '/';
+const showNav = !!cal || isHome;
 ---
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
@@ -47,32 +52,29 @@ const home = LIVE_CALENDARS[0] || null;   // 個人頁面的選單要連到的�
 </head>
 <body>
   <header class="top"><div class="wrap">
-    {/* 花曆底下：標誌和「小花老師」回個人首頁，後面才是這本花曆。
-        少了前面那一段，進到花曆就回不去首頁了。 */}
-    <span class="brandbox">
-      <a class="brand" href="/">
-        <img src="/logo.svg" alt="" width="30" height="30" decoding="async" />
-        <span>{AUTHOR}</span>
-      </a>
-      {cal && <><span class="sep" aria-hidden="true">／</span>
-        <a class="brand sub" href={`/${cal.slug}/`}>{cal.name}</a></>}
-    </span>
-    <nav aria-label="主選單">
-      {!cal && home && <a href={`/${home.slug}/`} aria-current={current === 'cal' ? 'page' : undefined}>花曆</a>}
-      {nc && <a href={`/${nc.slug}/month/`} aria-current={current === 'month' ? 'page' : undefined}>月份</a>}
-      {nc && nc.hasMap && <a href={`/${nc.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>找花地圖</a>}
-      {nc && nc.passport && nc.passport.length > 0 && <a href={`/${nc.slug}/passport/`} aria-current={current === 'passport' ? 'page' : undefined}>拍花護照</a>}
-      {nc && videosOf(nc.slug).length > 0 && <a href={`/${nc.slug}/video/`} aria-current={current === 'video' ? 'page' : undefined}>導覽影片</a>}
-      {/* 故事只放在個人頁面的選單。花曆底下的選單已經有六項，手機上再加就會多出一行，
-          而且花的頁面本來就有「為這種花寫的故事」，不靠選單也到得了。 */}
-      {!cal && <a href="/story/" aria-current={current === 'story' ? 'page' : undefined}>故事</a>}
-      <a href="/support/" aria-current={current === 'support' ? 'page' : undefined}>贊助</a>
-      <a href="/about/" aria-current={current === 'about' ? 'page' : undefined}>關於</a>
-    </nav>
+    {/* 左上角一律是「小花老師」，一律回首頁。這是全站唯一一個固定不動的出口。 */}
+    <a class="brand" href="/">
+      <img src="/logo.svg" alt="" width="30" height="30" decoding="async" />
+      <span>{AUTHOR}</span>
+    </a>
+    {showNav && (
+      <nav aria-label="主選單">
+        {home && <a href={`/${home.slug}/`} aria-current={current === 'cal' ? 'page' : undefined}>花曆</a>}
+        {nc && <a href={`/${nc.slug}/month/`} aria-current={current === 'month' ? 'page' : undefined}>月份</a>}
+        {nc && nc.hasMap && <a href={`/${nc.slug}/map/`} aria-current={current === 'map' ? 'page' : undefined}>找花地圖</a>}
+        {nc && nc.passport && nc.passport.length > 0 && <a href={`/${nc.slug}/passport/`} aria-current={current === 'passport' ? 'page' : undefined}>拍花護照</a>}
+        {/* 導覽影片不放選單：每一朵花的頁面上本來就有它那一區的影片，層級比較清楚 */}
+        {!cal && <a href="/story/" aria-current={current === 'story' ? 'page' : undefined}>故事</a>}
+        <a href="/support/" aria-current={current === 'support' ? 'page' : undefined}>贊助</a>
+      </nav>
+    )}
   </div></header>
   <main class="wrap"><slot /></main>
   <footer><div class="wrap">
-    {cal && <><a href="/">← 回{AUTHOR}首頁</a><br /></>}
+    {/* 關於不放選單了（內容和首頁有重疊），但它寫著資料的限制，不能讓它變成孤兒，所以留在這裡 */}
+    <p class="fnav"><a href="/">回{AUTHOR}首頁</a>
+      <a href="/about/">關於這份花曆</a>
+      <a href="/support/">贊助</a></p>
     <p class="disc">本網站資料為{AUTHOR}拍攝之花卉參考，僅供觀覽之用，並非官方網站，非作為學術上或花卉比對之作用。
       花名或有誤植、圖片錯置，也請多多指正。
       每月的花卉數量是指{AUTHOR}拍到的紀錄，並非實際的數字，也請參酌。<br />

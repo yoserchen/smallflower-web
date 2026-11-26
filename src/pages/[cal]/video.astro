@@ -23,7 +23,9 @@ const missing = Object.keys(byZone).filter((z) => videosForZone(cal.slug, z).len
   .sort((a, b) => byZone[b] - byZone[a]);
 const nf = (n) => n.toLocaleString('en-US');
 ---
-<Base title={`${cal.place}導覽影片`} cal={cal} current="video"
+{/* 不傳 cal：導覽影片自成一區，左上角寫「小花老師」，
+    選單是花曆／故事／贊助／關於，不帶月份、找花地圖那一排。 */}
+<Base title={`${cal.place}導覽影片`} current="video"
       description={`${AUTHOR}帶你走${cal.place}的每一區，一區一支影片，共 ${vids.length} 支。`}>
   <section>
     <h1>{cal.place}導覽影片</h1>
