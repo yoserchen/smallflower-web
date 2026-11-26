@@ -1,6 +1,8 @@
 // 網站設定：要改文字、連結或新增花曆，改這裡就好
 export const BRAND = '小花老師的花曆';
 export const AUTHOR = '小花老師';
+// 個人首頁的瀏覽器頁籤（只有首頁用；其他個人頁面是「標題｜小花老師」）
+export const SITE_TITLE = '小花老師｜花、照片與故事';
 export const DOMAIN = 'smallflower.tw';
 export const FB_URL = 'https://www.facebook.com/smallflower.tw';
 export const YOUTUBE_URL = 'https://www.youtube.com/@%E5%B0%8F%E8%8A%B1%E8%A6%96%E7%95%8C';        // 小花視界頻道網址，填了才會出現連結

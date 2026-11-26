@@ -14,6 +14,11 @@ export const CATS = (() => {
   return Object.entries(c).sort((a, b) => b[1] - a[1]);
 })();
 
+// 首頁那張卡片放哪幾篇（挑的是照片好看的六篇）。要換就改這裡的篇名。
+const FEATURED = ['娜塔莉亞', '猴歡喜和歡喜猴', '精靈兄弟', '綽號', '紅孩兒', '博物館'];
+export const featured = () =>
+  FEATURED.map((t) => DATA.find((s) => s.t === t)).filter(Boolean);
+
 const BY_FLOWER = (() => {
   const m = {};
   DATA.forEach((s) => s.f.forEach((n) => { (m[n] = m[n] || []).push(s); }));

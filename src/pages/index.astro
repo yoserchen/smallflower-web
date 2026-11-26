@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { LIVE_CALENDARS, liveOf, speciesOf } from '../lib.mjs';
 import { videosOf, featuredOf, thumbOf } from '../videos.mjs';
-import { STORIES, cover as storyCover } from '../stories.mjs';
+import { STORIES, featured as featuredStories, cover as storyCover } from '../stories.mjs';
 import { AUTHOR, FB_URL, YOUTUBE_URL, GOATCOUNTER } from '../config.mjs';
 
 const nf = (n) => n.toLocaleString('en-US');
@@ -20,11 +20,13 @@ const YT_SHOT  = '/yt.jpg';
 const FB_SHOT  = '/fb.jpg';
 
 // 這裡是「小花老師」個人的數字。植物園的 1,340 種寫在下面花曆那張卡片裡，不要混在一起。
+// 由多到少排。手機上排成 3×2，大的數字會集中在第一排。
 const stats = [
-  { n: '1,000+', t: '次走進植物園' },
   { n: '2,500+', t: '種不同的花' },
-  { n: '50+', t: '場拍花導覽' },
+  { n: '1,000+', t: '次走進植物園' },
+  { n: '200+', t: '花的故事' },      // 93 篇，其中 8 篇是連載，拆成小節共 210 節
   { n: '90+', t: '部影片' },
+  { n: '50+', t: '場拍花導覽' },
   { n: '3', t: '本書' },
 ];
 
@@ -176,7 +178,7 @@ const works = [
           <span class="more">看全部 {STORIES.length} 篇 →</span>
         </span>
         <span class="shots">
-          {STORIES.slice(0, 4).map((s) => (
+          {featuredStories().map((s) => (
             <span class="th">
               <img src={storyCover(s, true)} alt="" width="480" height="360" loading="lazy" decoding="async" />
             </span>
@@ -369,13 +371,13 @@ const works = [
 .tcard b{font-family:var(--serif);font-size:24px;display:block}
 .tcard p{margin:8px 0 12px;font-size:15px;line-height:1.85;color:var(--leaf)}
 .tcard .more{font-size:14px;color:var(--bloom);font-weight:700}
-.tcard .shots{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tcard .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .tcard .th{display:block;border-radius:10px;overflow:hidden;background:var(--mist);
   line-height:0;aspect-ratio:4/3}
 .tcard .th img{width:100%;height:100%;object-fit:cover;display:block}
 @media (max-width:760px){
   .tcard{grid-template-columns:1fr;gap:18px}
-  .tcard .shots{grid-template-columns:repeat(4,1fr)}
+  .tcard .shots{grid-template-columns:repeat(2,1fr)}
 }
 .cta{margin:24px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
 .cta .btn{display:inline-block;text-decoration:none;white-space:nowrap}
